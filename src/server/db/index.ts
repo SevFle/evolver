@@ -5,7 +5,9 @@ import * as schema from "./schema";
 function getDatabaseUrl(): string {
   const url = process.env.DATABASE_URL;
   if (!url) {
-    throw new Error("DATABASE_URL environment variable is not set");
+    throw new Error(
+      "DATABASE_URL environment variable is not set. Please set it in your .env file.",
+    );
   }
   return url;
 }
@@ -13,3 +15,5 @@ function getDatabaseUrl(): string {
 const sql = neon(getDatabaseUrl());
 
 export const db = drizzle(sql, { schema });
+
+export { sql as rawSql } from "drizzle-orm";
