@@ -1,0 +1,12 @@
+export const APP_NAME = "HookRelay" as const;
+export const APP_DESCRIPTION =
+  "Reliable webhook infrastructure for SaaS teams" as const;
+
+export const RETRY_SCHEDULE = [60_000, 300_000, 1_800_000, 7_200_000, 43_200_000] as const;
+export const MAX_RETRY_ATTEMPTS = 5;
+
+export const CIRCUIT_BREAKER_THRESHOLD = 5;
+
+export const DELIVERY_TIMEOUT_MS = 30_000;
+
+export const MAX_PAYLOAD_SIZE_BYTES = 512 * 1024;
