@@ -5,7 +5,7 @@ import { users } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import { createHash } from "node:crypto";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const nextAuthResult = NextAuth({
   providers: [
     Credentials({
       name: "credentials",
@@ -50,6 +50,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
+
+export const handlers = nextAuthResult.handlers;
+export const auth = nextAuthResult.auth;
+export const signIn = nextAuthResult.signIn;
+export const signOut = nextAuthResult.signOut;
 
 export function hashPassword(password: string): string {
   return createHash("sha256").update(password).digest("hex");

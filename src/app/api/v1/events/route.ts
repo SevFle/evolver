@@ -44,6 +44,13 @@ export async function POST(req: NextRequest) {
 
   const event = await createEvent(parsed.data);
 
+  if (!event) {
+    return NextResponse.json(
+      { error: "Failed to create event" },
+      { status: 500 },
+    );
+  }
+
   await enqueueDelivery({
     eventId: event.id,
     endpointId: endpoint.id,
