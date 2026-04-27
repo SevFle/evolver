@@ -1,0 +1,81 @@
+import { describe, it, expect } from "vitest";
+import { events } from "@/server/db/schema/events";
+import { endpoints } from "@/server/db/schema/endpoints";
+import { teams } from "@/server/db/schema/teams";
+import {
+  deliveryStatusEnum,
+  eventStatusEnum,
+  endpointStatusEnum,
+  userRoleEnum,
+} from "@/server/db/schema/enums";
+
+describe("schema field completeness", () => {
+  it("events table has endpointId column", () => {
+    expect(events.endpointId).toBeDefined();
+  });
+
+  it("events table has status column", () => {
+    expect(events.status).toBeDefined();
+  });
+
+  it("endpoints table has signingSecret column", () => {
+    expect(endpoints.signingSecret).toBeDefined();
+  });
+
+  it("endpoints table has status column", () => {
+    expect(endpoints.status).toBeDefined();
+  });
+
+  it("teams table has required columns", () => {
+    expect(teams.id).toBeDefined();
+    expect(teams.name).toBeDefined();
+    expect(teams.slug).toBeDefined();
+    expect(teams.createdAt).toBeDefined();
+    expect(teams.updatedAt).toBeDefined();
+  });
+});
+
+describe("enum values", () => {
+  it("deliveryStatusEnum has all expected values", () => {
+    expect(deliveryStatusEnum.enumValues).toEqual([
+      "pending",
+      "processing",
+      "success",
+      "failed",
+      "retry_scheduled",
+      "circuit_open",
+      "dead_letter",
+    ]);
+  });
+
+  it("eventStatusEnum has all expected values", () => {
+    expect(eventStatusEnum.enumValues).toEqual([
+      "queued",
+      "delivering",
+      "delivered",
+      "failed",
+    ]);
+  });
+
+  it("endpointStatusEnum has all expected values", () => {
+    expect(endpointStatusEnum.enumValues).toEqual([
+      "active",
+      "degraded",
+      "disabled",
+    ]);
+  });
+
+  it("userRoleEnum has all expected values", () => {
+    expect(userRoleEnum.enumValues).toEqual(["owner", "admin", "member"]);
+  });
+});
+
+describe("drizzle config", () => {
+  it("references DATABASE_URL_NON_POOLING", async () => {
+    const configText = await import("fs").then((fs) =>
+      fs.promises.readFile("drizzle.config.ts", "utf-8"),
+    );
+    expect(configText).toContain("DATABASE_URL_NON_POOLING");
+    expect(configText).not.toContain("process.env.DATABASE_URL!");
+  });
+});

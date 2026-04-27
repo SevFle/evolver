@@ -56,11 +56,13 @@ export interface ApiKey {
 
 export interface CreateEndpointRequest {
   url: string;
+  name?: string;
   description?: string;
   customHeaders?: Record<string, string>;
 }
 
 export interface SendEventRequest {
+  userId: string;
   endpointId: string;
   payload: Record<string, unknown>;
   eventType: string;

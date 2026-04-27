@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const event = await createEvent(parsed.data);
+  const event = await createEvent({ ...parsed.data, userId: auth.userId });
 
   if (!event) {
     return NextResponse.json(

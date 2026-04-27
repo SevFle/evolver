@@ -41,6 +41,7 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
     await createDelivery({
       eventId: event.id,
       endpointId: endpoint.id,
+      userId: event.userId,
       attemptNumber: data.attemptNumber,
       statusCode: result.statusCode,
       responseBody: result.responseBody,
@@ -63,6 +64,7 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
     await createDelivery({
       eventId: event.id,
       endpointId: endpoint.id,
+      userId: event.userId,
       attemptNumber: data.attemptNumber,
       status: "failed",
     });

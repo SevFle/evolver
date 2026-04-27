@@ -1,11 +1,12 @@
 import NextAuth from "next-auth";
+import type { NextAuthConfig, Session } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { db } from "@/server/db";
 import { users } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import { createHash } from "node:crypto";
 
-const nextAuthResult = NextAuth({
+const authConfig: NextAuthConfig = {
   providers: [
     Credentials({
       name: "credentials",
@@ -49,12 +50,29 @@ const nextAuthResult = NextAuth({
       return session;
     },
   },
-});
+};
+
+const nextAuthResult = NextAuth(authConfig);
 
 export const handlers = nextAuthResult.handlers;
-export const auth = nextAuthResult.auth;
-export const signIn = nextAuthResult.signIn;
-export const signOut = nextAuthResult.signOut;
+
+export async function auth(): Promise<Session | null> {
+  return nextAuthResult.auth();
+}
+
+export async function signIn(
+  provider?: string,
+  options?: { redirectTo?: string; redirect?: boolean },
+): Promise<void> {
+  return nextAuthResult.signIn(provider as never, options as never) as Promise<void>;
+}
+
+export async function signOut(options?: {
+  redirectTo?: string;
+  redirect?: boolean;
+}): Promise<void> {
+  return nextAuthResult.signOut(options as never) as Promise<void>;
+}
 
 export function hashPassword(password: string): string {
   return createHash("sha256").update(password).digest("hex");

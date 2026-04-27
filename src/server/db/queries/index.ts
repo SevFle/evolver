@@ -10,11 +10,13 @@ export async function createEndpoint(
   data: CreateEndpointRequest,
 ) {
   const secret = generateSigningSecret();
+  const name = data.name ?? new URL(data.url).hostname;
   const [endpoint] = await db
     .insert(endpoints)
     .values({
       userId,
       url: data.url,
+      name,
       description: data.description ?? null,
       signingSecret: secret,
       customHeaders: data.customHeaders ?? null,
@@ -59,6 +61,7 @@ export async function createEvent(data: SendEventRequest) {
   const [event] = await db
     .insert(events)
     .values({
+      userId: data.userId,
       endpointId: data.endpointId,
       payload: data.payload,
       eventType: data.eventType,
@@ -87,6 +90,7 @@ export async function getEventsByEndpointId(endpointId: string, limit = 50) {
 export async function createDelivery(data: {
   eventId: string;
   endpointId: string;
+  userId: string;
   attemptNumber: number;
   statusCode?: number | null;
   responseBody?: string | null;
@@ -153,7 +157,7 @@ export async function createApiKeyForUser(userId: string, name: string) {
   await db.insert(apiKeys).values({
     userId,
     keyHash: hash,
-    prefix,
+    keyPrefix: prefix,
     name,
   });
   return { raw, prefix };
@@ -171,7 +175,7 @@ export async function getApiKeysByUserId(userId: string) {
   return db
     .select({
       id: apiKeys.id,
-      prefix: apiKeys.prefix,
+      prefix: apiKeys.keyPrefix,
       name: apiKeys.name,
       lastUsedAt: apiKeys.lastUsedAt,
       createdAt: apiKeys.createdAt,

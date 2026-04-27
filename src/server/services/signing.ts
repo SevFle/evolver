@@ -31,7 +31,7 @@ export function verifySignature(
   for (const part of parts) {
     const [key, value] = part.split("=");
     if (key === "t") timestamp = Number(value);
-    if (key === "v1") v1 = value;
+    if (key === "v1") v1 = value ?? null;
   }
 
   if (!timestamp || !v1) return false;
