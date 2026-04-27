@@ -28,7 +28,7 @@ const authConfig: NextAuthConfig = {
 
         if (!user) return null;
 
-        const valid = verifyPassword(credentials.password as string, user.passwordHash);
+        const valid = await verifyPassword(credentials.password as string, user.passwordHash);
         if (!valid) return null;
 
         return { id: user.id, email: user.email, name: user.name };
