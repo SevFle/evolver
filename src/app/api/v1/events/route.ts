@@ -6,7 +6,7 @@ import { enqueueDelivery } from "@/server/queue/producer";
 import { MAX_PAYLOAD_SIZE_BYTES } from "@/lib/constants";
 
 const sendEventSchema = z.object({
-  endpointId: z.string().uuid("Must be a valid endpoint ID"),
+  endpointId: z.string().min(1),
   payload: z.record(z.unknown()),
   eventType: z.string().min(1).max(255),
 });
@@ -34,8 +34,22 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const endpoint = await getEndpointById(parsed.data.endpointId, auth.userId);
-  if (!endpoint || endpoint.status === "disabled") {
+  const endpoint = await getEndpointById(parsed.data.endpointId);
+  if (!endpoint) {
+    return NextResponse.json(
+      { error: "Endpoint not found" },
+      { status: 404 },
+    );
+  }
+
+  if (endpoint.userId !== auth.userId) {
+    return NextResponse.json(
+      { error: "Endpoint not found" },
+      { status: 404 },
+    );
+  }
+
+  if (endpoint.status === "disabled") {
     return NextResponse.json(
       { error: "Endpoint not found or disabled" },
       { status: 404 },

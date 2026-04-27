@@ -47,17 +47,24 @@ export async function getEndpointById(id: string, userId?: string) {
 export async function updateEndpoint(
   id: string,
   data: Partial<Pick<typeof endpoints.$inferInsert, "url" | "description" | "customHeaders" | "status">>,
+  userId?: string,
 ) {
+  const conditions = userId
+    ? and(eq(endpoints.id, id), eq(endpoints.userId, userId))
+    : eq(endpoints.id, id);
   const [endpoint] = await db
     .update(endpoints)
     .set({ ...data, updatedAt: new Date() })
-    .where(eq(endpoints.id, id))
+    .where(conditions)
     .returning();
   return endpoint;
 }
 
-export async function deleteEndpoint(id: string) {
-  await db.delete(endpoints).where(eq(endpoints.id, id));
+export async function deleteEndpoint(id: string, userId?: string) {
+  const conditions = userId
+    ? and(eq(endpoints.id, id), eq(endpoints.userId, userId))
+    : eq(endpoints.id, id);
+  await db.delete(endpoints).where(conditions);
 }
 
 export async function createEvent(data: SendEventRequest) {

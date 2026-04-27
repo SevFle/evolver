@@ -10,13 +10,22 @@ const updateEndpointSchema = z.object({
 });
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auth = await authenticateApiKey(req);
+  if (!auth) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id } = await params;
   const endpoint = await getEndpointById(id);
 
   if (!endpoint) {
+    return NextResponse.json({ error: "Endpoint not found" }, { status: 404 });
+  }
+
+  if (endpoint.userId !== auth.userId) {
     return NextResponse.json({ error: "Endpoint not found" }, { status: 404 });
   }
 
@@ -45,6 +54,10 @@ export async function PATCH(
     return NextResponse.json({ error: "Endpoint not found" }, { status: 404 });
   }
 
+  if (endpoint.userId !== auth.userId) {
+    return NextResponse.json({ error: "Endpoint not found" }, { status: 404 });
+  }
+
   const body = await req.json();
   const parsed = updateEndpointSchema.safeParse(body);
   if (!parsed.success) {
@@ -54,7 +67,7 @@ export async function PATCH(
     );
   }
 
-  const updated = await updateEndpoint(id, parsed.data);
+  const updated = await updateEndpoint(id, parsed.data, auth.userId);
   return NextResponse.json(updated);
 }
 
@@ -73,6 +86,10 @@ export async function DELETE(
     return NextResponse.json({ error: "Endpoint not found" }, { status: 404 });
   }
 
-  await deleteEndpoint(id);
+  if (endpoint.userId !== auth.userId) {
+    return NextResponse.json({ error: "Endpoint not found" }, { status: 404 });
+  }
+
+  await deleteEndpoint(id, auth.userId);
   return new NextResponse(null, { status: 204 });
 }
