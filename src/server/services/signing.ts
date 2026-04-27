@@ -1,4 +1,4 @@
-import { createHmac } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 
 export function generateSigningSecret(): string {
   const bytes = new Uint8Array(32);
@@ -41,5 +41,6 @@ export function verifySignature(
 
   const expected = signPayload(payload, secret, timestamp);
   const expectedV1 = expected.split(",").find((p) => p.startsWith("v1="))?.split("=")[1];
-  return expectedV1 === v1;
+  if (!expectedV1 || expectedV1.length !== v1.length) return false;
+  return timingSafeEqual(Buffer.from(expectedV1), Buffer.from(v1));
 }

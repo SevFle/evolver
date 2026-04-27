@@ -33,11 +33,14 @@ export async function getEndpointsByUserId(userId: string) {
     .orderBy(desc(endpoints.createdAt));
 }
 
-export async function getEndpointById(id: string) {
+export async function getEndpointById(id: string, userId?: string) {
+  const conditions = userId
+    ? and(eq(endpoints.id, id), eq(endpoints.userId, userId))
+    : eq(endpoints.id, id);
   const [endpoint] = await db
     .select()
     .from(endpoints)
-    .where(eq(endpoints.id, id));
+    .where(conditions);
   return endpoint ?? null;
 }
 
@@ -70,19 +73,25 @@ export async function createEvent(data: SendEventRequest) {
   return event;
 }
 
-export async function getEventById(id: string) {
+export async function getEventById(id: string, userId?: string) {
+  const conditions = userId
+    ? and(eq(events.id, id), eq(events.userId, userId))
+    : eq(events.id, id);
   const [event] = await db
     .select()
     .from(events)
-    .where(eq(events.id, id));
+    .where(conditions);
   return event ?? null;
 }
 
-export async function getEventsByEndpointId(endpointId: string, limit = 50) {
+export async function getEventsByEndpointId(endpointId: string, userId?: string, limit = 50) {
+  const conditions = userId
+    ? and(eq(events.endpointId, endpointId), eq(events.userId, userId))
+    : eq(events.endpointId, endpointId);
   return db
     .select()
     .from(events)
-    .where(eq(events.endpointId, endpointId))
+    .where(conditions)
     .orderBy(desc(events.createdAt))
     .limit(limit);
 }
@@ -106,22 +115,29 @@ export async function createDelivery(data: {
   return delivery;
 }
 
-export async function getDeliveriesByEventId(eventId: string) {
+export async function getDeliveriesByEventId(eventId: string, userId?: string) {
+  const conditions = userId
+    ? and(eq(deliveries.eventId, eventId), eq(deliveries.userId, userId))
+    : eq(deliveries.eventId, eventId);
   return db
     .select()
     .from(deliveries)
-    .where(eq(deliveries.eventId, eventId))
+    .where(conditions)
     .orderBy(desc(deliveries.createdAt));
 }
 
 export async function getRecentDeliveriesByEndpoint(
   endpointId: string,
+  userId?: string,
   limit = 20,
 ) {
+  const conditions = userId
+    ? and(eq(deliveries.endpointId, endpointId), eq(deliveries.userId, userId))
+    : eq(deliveries.endpointId, endpointId);
   return db
     .select()
     .from(deliveries)
-    .where(eq(deliveries.endpointId, endpointId))
+    .where(conditions)
     .orderBy(desc(deliveries.createdAt))
     .limit(limit);
 }

@@ -12,13 +12,13 @@ export async function GET(
   }
 
   const { id } = await params;
-  const event = await getEventById(id);
+  const event = await getEventById(id, auth.userId);
 
   if (!event) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
-  const deliveryAttempts = await getDeliveriesByEventId(id);
+  const deliveryAttempts = await getDeliveriesByEventId(id, auth.userId);
 
   return NextResponse.json({
     id: event.id,

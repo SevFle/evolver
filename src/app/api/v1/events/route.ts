@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const endpoint = await getEndpointById(parsed.data.endpointId);
+  const endpoint = await getEndpointById(parsed.data.endpointId, auth.userId);
   if (!endpoint || endpoint.status === "disabled") {
     return NextResponse.json(
       { error: "Endpoint not found or disabled" },

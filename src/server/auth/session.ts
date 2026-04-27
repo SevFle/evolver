@@ -4,7 +4,9 @@ import Credentials from "next-auth/providers/credentials";
 import { db } from "@/server/db";
 import { users } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
-import { createHash } from "node:crypto";
+import { verifyPassword } from "@/server/auth/password";
+
+export { hashPassword } from "@/server/auth/password";
 
 const authConfig: NextAuthConfig = {
   providers: [
@@ -26,8 +28,8 @@ const authConfig: NextAuthConfig = {
 
         if (!user) return null;
 
-        const passwordHash = hashPassword(credentials.password as string);
-        if (user.passwordHash !== passwordHash) return null;
+        const valid = verifyPassword(credentials.password as string, user.passwordHash);
+        if (!valid) return null;
 
         return { id: user.id, email: user.email, name: user.name };
       },
@@ -72,8 +74,4 @@ export async function signOut(options?: {
   redirect?: boolean;
 }): Promise<void> {
   return nextAuthResult.signOut(options as never) as Promise<void>;
-}
-
-export function hashPassword(password: string): string {
-  return createHash("sha256").update(password).digest("hex");
 }

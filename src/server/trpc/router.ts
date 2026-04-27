@@ -15,8 +15,8 @@ const endpointRouter = router({
   }),
   get: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
-    .query(async ({ input }) => {
-      const endpoint = await getEndpointById(input.id);
+    .query(async ({ input, ctx }) => {
+      const endpoint = await getEndpointById(input.id, ctx.userId);
       if (!endpoint) return null;
       return endpoint;
     }),
@@ -25,9 +25,9 @@ const endpointRouter = router({
 const eventRouter = router({
   list: protectedProcedure
     .input(z.object({ endpointId: z.string().uuid() }).optional())
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       if (input?.endpointId) {
-        return getEventsByEndpointId(input.endpointId);
+        return getEventsByEndpointId(input.endpointId, ctx.userId);
       }
       return [];
     }),
@@ -36,14 +36,14 @@ const eventRouter = router({
 const deliveryRouter = router({
   listByEvent: protectedProcedure
     .input(z.object({ eventId: z.string().uuid() }))
-    .query(async ({ input }) => {
-      return getDeliveriesByEventId(input.eventId);
+    .query(async ({ input, ctx }) => {
+      return getDeliveriesByEventId(input.eventId, ctx.userId);
     }),
   listByEndpoint: protectedProcedure
     .input(z.object({ endpointId: z.string().uuid() }).optional())
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       if (input?.endpointId) {
-        return getRecentDeliveriesByEndpoint(input.endpointId);
+        return getRecentDeliveriesByEndpoint(input.endpointId, ctx.userId);
       }
       return [];
     }),
