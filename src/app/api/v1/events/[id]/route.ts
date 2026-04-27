@@ -30,7 +30,7 @@ export async function GET(
     deliveries: deliveryAttempts.map((d) => ({
       id: d.id,
       attemptNumber: d.attemptNumber,
-      statusCode: d.statusCode,
+      statusCode: d.responseStatusCode,
       status: d.status,
       durationMs: d.durationMs,
       createdAt: d.createdAt,

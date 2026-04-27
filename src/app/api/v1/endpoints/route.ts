@@ -38,6 +38,13 @@ export async function POST(req: NextRequest) {
 
   const endpoint = await createEndpoint(auth.userId, parsed.data);
 
+  if (!endpoint) {
+    return NextResponse.json(
+      { error: "Failed to create endpoint" },
+      { status: 500 },
+    );
+  }
+
   return NextResponse.json(
     {
       id: endpoint.id,

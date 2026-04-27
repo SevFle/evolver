@@ -15,5 +15,3 @@ function getDatabaseUrl(): string {
 const sql = neon(getDatabaseUrl());
 
 export const db = drizzle(sql, { schema });
-
-export { sql as rawSql } from "drizzle-orm";

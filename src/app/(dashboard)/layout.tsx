@@ -1,11 +1,11 @@
 import Link from "next/link";
 
 const navItems = [
-  { href: "/endpoints", label: "Endpoints" },
-  { href: "/events", label: "Events" },
-  { href: "/deliveries", label: "Deliveries" },
-  { href: "/analytics", label: "Analytics" },
-  { href: "/settings", label: "Settings" },
+  { href: "/endpoints" as const, label: "Endpoints" },
+  { href: "/events" as const, label: "Events" },
+  { href: "/deliveries" as const, label: "Deliveries" },
+  { href: "/analytics" as const, label: "Analytics" },
+  { href: "/settings" as const, label: "Settings" },
 ];
 
 export default function DashboardLayout({

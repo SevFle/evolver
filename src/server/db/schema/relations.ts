@@ -4,6 +4,7 @@ import { apiKeys } from "./api-keys";
 import { endpoints } from "./endpoints";
 import { events } from "./events";
 import { deliveries } from "./deliveries";
+import { teams } from "./teams";
 
 export const usersRelations = relations(users, ({ many }) => ({
   apiKeys: many(apiKeys),
@@ -24,6 +25,7 @@ export const endpointsRelations = relations(endpoints, ({ one, many }) => ({
     fields: [endpoints.userId],
     references: [users.id],
   }),
+  events: many(events),
   deliveries: many(deliveries),
 }));
 
@@ -31,6 +33,10 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
   user: one(users, {
     fields: [events.userId],
     references: [users.id],
+  }),
+  endpoint: one(endpoints, {
+    fields: [events.endpointId],
+    references: [endpoints.id],
   }),
   deliveries: many(deliveries),
 }));
@@ -48,4 +54,8 @@ export const deliveriesRelations = relations(deliveries, ({ one }) => ({
     fields: [deliveries.userId],
     references: [users.id],
   }),
+}));
+
+export const teamsRelations = relations(teams, ({ many }) => ({
+  users: many(users),
 }));

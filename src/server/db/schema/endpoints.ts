@@ -10,6 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { users } from "./users";
+import { endpointStatusEnum } from "./enums";
 
 export const endpoints = pgTable(
   "endpoints",
@@ -21,7 +22,8 @@ export const endpoints = pgTable(
     url: text("url").notNull(),
     name: text("name").notNull(),
     description: text("description"),
-    secret: text("secret").notNull(),
+    signingSecret: text("signing_secret").notNull(),
+    status: endpointStatusEnum("status").default("active").notNull(),
     customHeaders: jsonb("custom_headers").$type<Record<string, string>>().default({}),
     isActive: boolean("is_active").default(true).notNull(),
     disabledReason: text("disabled_reason"),
