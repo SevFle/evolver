@@ -29,7 +29,11 @@ export function filterBlockedHeaders(
 ): Record<string, string> {
   const filtered: Record<string, string> = {};
   for (const [key, value] of Object.entries(headers)) {
-    if (!BLOCKED_HEADERS.has(key.toLowerCase())) {
+    const lower = key.toLowerCase();
+    if (
+      !BLOCKED_HEADERS.has(lower) &&
+      !lower.startsWith("x-hookrelay-")
+    ) {
       filtered[key] = value;
     }
   }

@@ -100,6 +100,15 @@ describe("delivery headers", () => {
       expect(result).toEqual({});
     });
 
+    it("removes any X-HookRelay-* header (wildcard pattern)", () => {
+      const result = filterBlockedHeaders({
+        "X-HookRelay-Custom": "value",
+        "X-HOOKRELAY-TRACE-ID": "123",
+        "x-hookrelay-anything": "nope",
+      });
+      expect(result).toEqual({});
+    });
+
     it("returns empty object for empty input", () => {
       expect(filterBlockedHeaders({})).toEqual({});
     });
@@ -184,6 +193,36 @@ describe("delivery headers", () => {
       expect(capturedHeaders).not.toHaveProperty("Authorization");
       expect(capturedHeaders).not.toHaveProperty("host");
       expect(capturedHeaders).not.toHaveProperty("Host");
+      expect(capturedHeaders["X-Custom"]).toBe("keep");
+    });
+
+    it("strips unknown X-HookRelay-* headers from custom headers", async () => {
+      const capturedHeaders: Record<string, string> = {};
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (_url: string, opts: RequestInit) => {
+          Object.assign(capturedHeaders, opts.headers as Record<string, string>);
+          return new Response("ok", { status: 200 });
+        }),
+      );
+
+      const { validateDeliveryUrl } = await import("@/server/services/delivery");
+      (validateDeliveryUrl as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+      await deliverWebhook(
+        "https://example.com/hook",
+        { test: true },
+        "whsec_test",
+        "evt_123",
+        {
+          "X-HookRelay-Injected": "malicious",
+          "x-hookrelay-trace-id": "sneaky",
+          "X-Custom": "keep",
+        },
+      );
+
+      expect(capturedHeaders).not.toHaveProperty("X-HookRelay-Injected");
+      expect(capturedHeaders).not.toHaveProperty("x-hookrelay-trace-id");
       expect(capturedHeaders["X-Custom"]).toBe("keep");
     });
   });
