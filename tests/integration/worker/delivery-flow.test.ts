@@ -8,6 +8,8 @@ vi.mock("@/server/db/queries", () => ({
   updateEventStatus: vi.fn(),
   getConsecutiveFailures: vi.fn(),
   updateEndpoint: vi.fn(),
+  getUserById: vi.fn(),
+  getLastErrorForEndpoint: vi.fn(),
 }));
 
 vi.mock("@/server/services/delivery", () => ({
@@ -20,6 +22,10 @@ vi.mock("@/server/queue/producer", () => ({
   enqueueDeadLetter: vi.fn(),
 }));
 
+vi.mock("@/server/services/email", () => ({
+  sendFailureAlert: vi.fn().mockResolvedValue({ success: true, provider: "log" }),
+}));
+
 import { handleDelivery } from "@/server/queue/handlers";
 import {
   getSuccessfulDelivery,
@@ -29,9 +35,12 @@ import {
   updateEventStatus,
   getConsecutiveFailures,
   updateEndpoint,
+  getUserById,
+  getLastErrorForEndpoint,
 } from "@/server/db/queries";
 import { deliverWebhook, isSuccessfulDelivery } from "@/server/services/delivery";
 import { enqueueDelivery, enqueueDeadLetter } from "@/server/queue/producer";
+import { sendFailureAlert } from "@/server/services/email";
 
 const mockEvent = {
   id: "evt-001",
@@ -91,6 +100,9 @@ beforeEach(() => {
   vi.mocked(updateEndpoint).mockResolvedValue(undefined as never);
   vi.mocked(enqueueDelivery).mockResolvedValue("job-123");
   vi.mocked(enqueueDeadLetter).mockResolvedValue("dlq-123");
+  vi.mocked(getUserById).mockResolvedValue({ id: "user-001", email: "dev@example.com", name: "Dev" });
+  vi.mocked(getLastErrorForEndpoint).mockResolvedValue("Connection refused");
+  vi.mocked(sendFailureAlert).mockResolvedValue({ success: true, provider: "log" });
 });
 
 describe("handleDelivery - full delivery flow", () => {
@@ -290,6 +302,30 @@ describe("handleDelivery - full delivery flow", () => {
     expect(updateEndpoint).toHaveBeenCalledWith("ep-001", {
       status: "degraded",
     });
+  });
+
+  it("sends email alert when circuit breaker triggers", async () => {
+    vi.mocked(deliverWebhook).mockResolvedValue({
+      ...mockDeliveryResult,
+      statusCode: 500,
+    });
+    vi.mocked(getConsecutiveFailures).mockResolvedValue(5);
+
+    await handleDelivery({
+      eventId: "evt-001",
+      endpointId: "ep-001",
+      attemptNumber: 1,
+    });
+
+    expect(sendFailureAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        endpointId: "ep-001",
+        endpointName: "Test Endpoint",
+        endpointUrl: "https://example.com/webhook",
+        failureCount: 5,
+        userEmail: "dev@example.com",
+      }),
+    );
   });
 
   it("resets endpoint status to active after successful delivery from degraded", async () => {

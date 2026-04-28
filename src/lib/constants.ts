@@ -11,3 +11,7 @@ export const DELIVERY_TIMEOUT_MS = 30_000;
 
 export const MAX_PAYLOAD_SIZE_BYTES = 512 * 1024;
 export const MAX_PAYLOAD_RESPONSE_SIZE = 10 * 1024;
+
+export const EMAIL_RATE_LIMIT_MS = 60 * 60 * 1000;
+export const DEFAULT_EMAIL_FROM = "alerts@hookrelay.dev";
+export const EMAIL_ALERT_THRESHOLD = CIRCUIT_BREAKER_THRESHOLD;

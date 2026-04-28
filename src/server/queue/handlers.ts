@@ -8,6 +8,8 @@ import {
   getConsecutiveFailures,
   updateEndpoint,
   getSuccessfulDelivery,
+  getUserById,
+  getLastErrorForEndpoint,
 } from "@/server/db/queries";
 import { deliverWebhook, isSuccessfulDelivery } from "@/server/services/delivery";
 import { getNextRetryAt, hasRetriesRemaining } from "@/server/services/retry";
@@ -16,6 +18,7 @@ import {
   getEndpointStatusAfterSuccess,
   shouldBreakCircuit,
 } from "@/server/services/circuit";
+import { sendFailureAlert } from "@/server/services/email";
 import { MAX_PAYLOAD_RESPONSE_SIZE } from "@/lib/constants";
 
 function truncateResponse(body: string): string {
@@ -79,10 +82,12 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
         });
       }
     } else {
+      const failureMessage = `HTTP ${result.statusCode}`;
       await handleFailedDelivery(
         event.id,
-        endpoint.id,
+        endpoint,
         data.attemptNumber,
+        failureMessage,
       );
     }
   } catch (error) {
@@ -107,16 +112,18 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
 
     await handleFailedDelivery(
       event.id,
-      endpoint.id,
+      endpoint,
       data.attemptNumber,
+      errorMessage,
     );
   }
 }
 
 async function handleFailedDelivery(
   eventId: string,
-  endpointId: string,
+  endpoint: { id: string; userId: string; url: string; name: string },
   attemptNumber: number,
+  lastErrorMessage?: string | null,
 ): Promise<void> {
   const nextAttempt = attemptNumber + 1;
 
@@ -125,26 +132,49 @@ async function handleFailedDelivery(
     const delayMs = nextRetryAt.getTime() - Date.now();
 
     await enqueueDelivery(
-      { eventId, endpointId, attemptNumber: nextAttempt },
+      { eventId, endpointId: endpoint.id, attemptNumber: nextAttempt },
       Math.max(delayMs, 0),
     );
   } else {
     await enqueueDeadLetter(
-      { eventId, endpointId, attemptNumber },
+      { eventId, endpointId: endpoint.id, attemptNumber },
       `Max retries (${attemptNumber}) exhausted`,
     );
     await updateEventStatus(eventId, "failed");
   }
 
-  const consecutiveFailures = await getConsecutiveFailures(endpointId);
+  const consecutiveFailures = await getConsecutiveFailures(endpoint.id);
   const newStatus = getEndpointStatusAfterFailure(consecutiveFailures);
   if (newStatus !== "active") {
-    await updateEndpoint(endpointId, { status: newStatus });
+    await updateEndpoint(endpoint.id, { status: newStatus });
   }
 
   if (shouldBreakCircuit(consecutiveFailures)) {
     console.warn(
-      `Endpoint ${endpointId} has ${consecutiveFailures} consecutive failures. Status: ${newStatus}. Owner should be alerted.`,
+      `Endpoint ${endpoint.id} has ${consecutiveFailures} consecutive failures. Status: ${newStatus}. Sending alert.`,
     );
+
+    try {
+      const user = await getUserById(endpoint.userId);
+      if (!user) {
+        console.error(`User ${endpoint.userId} not found for endpoint ${endpoint.id}`);
+        return;
+      }
+
+      const error = lastErrorMessage ?? await getLastErrorForEndpoint(endpoint.id);
+      const dashboardBase = process.env.DASHBOARD_URL ?? "http://localhost:3000";
+
+      await sendFailureAlert({
+        endpointId: endpoint.id,
+        endpointName: endpoint.name,
+        endpointUrl: endpoint.url,
+        failureCount: consecutiveFailures,
+        lastErrorMessage: error,
+        dashboardUrl: `${dashboardBase}/dashboard/endpoints/${endpoint.id}`,
+        userEmail: user.email,
+      });
+    } catch (err) {
+      console.error(`Failed to send failure alert for endpoint ${endpoint.id}:`, err);
+    }
   }
 }

@@ -1,6 +1,6 @@
 import { eq, desc, and } from "drizzle-orm";
 import { db } from "@/server/db";
-import { endpoints, events, deliveries, apiKeys } from "@/server/db/schema";
+import { users, endpoints, events, deliveries, apiKeys } from "@/server/db/schema";
 import type { CreateEndpointRequest, SendEventRequest } from "@/types";
 import type { DeliveryStatus } from "@/server/db/schema/enums";
 import { generateSigningSecret } from "@/server/services/signing";
@@ -235,4 +235,26 @@ export async function touchApiKeyLastUsed(id: string) {
     .update(apiKeys)
     .set({ lastUsedAt: new Date() })
     .where(eq(apiKeys.id, id));
+}
+
+export async function getUserById(id: string) {
+  const [user] = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+    })
+    .from(users)
+    .where(eq(users.id, id));
+  return user ?? null;
+}
+
+export async function getLastErrorForEndpoint(endpointId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ errorMessage: deliveries.errorMessage })
+    .from(deliveries)
+    .where(eq(deliveries.endpointId, endpointId))
+    .orderBy(desc(deliveries.createdAt))
+    .limit(1);
+  return row?.errorMessage ?? null;
 }
