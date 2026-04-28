@@ -1,5 +1,5 @@
 import type { DeliveryJobData } from "./queues";
-import { enqueueDelivery } from "./producer";
+import { enqueueDelivery, enqueueDeadLetter } from "./producer";
 import {
   getEndpointById,
   getEventById,
@@ -7,12 +7,31 @@ import {
   updateEventStatus,
   getConsecutiveFailures,
   updateEndpoint,
+  getSuccessfulDelivery,
 } from "@/server/db/queries";
 import { deliverWebhook, isSuccessfulDelivery } from "@/server/services/delivery";
 import { getNextRetryAt, hasRetriesRemaining } from "@/server/services/retry";
-import { getEndpointStatusAfterFailure, getEndpointStatusAfterSuccess, shouldBreakCircuit } from "@/server/services/circuit";
+import {
+  getEndpointStatusAfterFailure,
+  getEndpointStatusAfterSuccess,
+  shouldBreakCircuit,
+} from "@/server/services/circuit";
+import { MAX_PAYLOAD_RESPONSE_SIZE } from "@/lib/constants";
+
+function truncateResponse(body: string): string {
+  if (body.length <= MAX_PAYLOAD_RESPONSE_SIZE) return body;
+  return body.slice(0, MAX_PAYLOAD_RESPONSE_SIZE);
+}
 
 export async function handleDelivery(data: DeliveryJobData): Promise<void> {
+  const alreadyDelivered = await getSuccessfulDelivery(data.eventId, data.endpointId);
+  if (alreadyDelivered) {
+    console.log(
+      `Skipping duplicate delivery: event=${data.eventId} endpoint=${data.endpointId}`,
+    );
+    return;
+  }
+
   const event = await getEventById(data.eventId);
   if (!event) {
     console.error(`Event ${data.eventId} not found`);
@@ -20,7 +39,7 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
   }
 
   const endpoint = await getEndpointById(data.endpointId);
-  if (!endpoint || endpoint.status === "disabled") {
+  if (!endpoint || endpoint.status === "disabled" || !endpoint.isActive) {
     await updateEventStatus(event.id, "failed");
     return;
   }
@@ -33,7 +52,7 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
       event.payload as Record<string, unknown>,
       endpoint.signingSecret,
       event.id,
-      endpoint.customHeaders,
+      endpoint.customHeaders as Record<string, string> | null,
     );
 
     const success = isSuccessfulDelivery(result.statusCode);
@@ -43,11 +62,13 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
       endpointId: endpoint.id,
       userId: event.userId,
       attemptNumber: data.attemptNumber,
-      statusCode: result.statusCode,
-      responseBody: result.responseBody,
+      responseStatusCode: result.statusCode,
+      responseBody: truncateResponse(result.responseBody),
       responseHeaders: result.responseHeaders,
+      requestHeaders: result.requestHeaders,
       durationMs: result.durationMs,
       status: success ? "success" : "failed",
+      completedAt: success ? new Date() : null,
     });
 
     if (success) {
@@ -58,18 +79,37 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
         });
       }
     } else {
-      await handleFailedDelivery(event.id, endpoint.id, data.attemptNumber);
+      await handleFailedDelivery(
+        event.id,
+        endpoint.id,
+        data.attemptNumber,
+      );
     }
   } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown delivery error";
+
+    const requestHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+      "X-HookRelay-Event-ID": event.id,
+      ...(endpoint.customHeaders as Record<string, string> | null ?? {}),
+    };
+
     await createDelivery({
       eventId: event.id,
       endpointId: endpoint.id,
       userId: event.userId,
       attemptNumber: data.attemptNumber,
       status: "failed",
+      requestHeaders,
+      errorMessage,
     });
 
-    await handleFailedDelivery(event.id, endpoint.id, data.attemptNumber);
+    await handleFailedDelivery(
+      event.id,
+      endpoint.id,
+      data.attemptNumber,
+    );
   }
 }
 
@@ -78,13 +118,21 @@ async function handleFailedDelivery(
   endpointId: string,
   attemptNumber: number,
 ): Promise<void> {
-  if (hasRetriesRemaining(attemptNumber + 1)) {
+  const nextAttempt = attemptNumber + 1;
+
+  if (hasRetriesRemaining(nextAttempt)) {
     const nextRetryAt = getNextRetryAt(attemptNumber);
+    const delayMs = nextRetryAt.getTime() - Date.now();
+
     await enqueueDelivery(
-      { eventId, endpointId, attemptNumber: attemptNumber + 1 },
-      nextRetryAt.getTime() - Date.now(),
+      { eventId, endpointId, attemptNumber: nextAttempt },
+      Math.max(delayMs, 0),
     );
   } else {
+    await enqueueDeadLetter(
+      { eventId, endpointId, attemptNumber },
+      `Max retries (${attemptNumber}) exhausted`,
+    );
     await updateEventStatus(eventId, "failed");
   }
 

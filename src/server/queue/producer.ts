@@ -1,5 +1,5 @@
 import { Queue } from "bullmq";
-import { DELIVERY_QUEUE, type DeliveryJobData } from "./queues";
+import { DELIVERY_QUEUE, DEAD_LETTER_QUEUE, type DeliveryJobData } from "./queues";
 
 function getRedisConnection() {
   return {
@@ -16,6 +16,7 @@ function getRedisConnection() {
 }
 
 let deliveryQueue: Queue<DeliveryJobData> | null = null;
+let deadLetterQueue: Queue<DeliveryJobData> | null = null;
 
 export function getDeliveryQueue(): Queue<DeliveryJobData> {
   if (!deliveryQueue) {
@@ -24,6 +25,15 @@ export function getDeliveryQueue(): Queue<DeliveryJobData> {
     });
   }
   return deliveryQueue;
+}
+
+export function getDeadLetterQueue(): Queue<DeliveryJobData> {
+  if (!deadLetterQueue) {
+    deadLetterQueue = new Queue<DeliveryJobData>(DEAD_LETTER_QUEUE, {
+      connection: getRedisConnection(),
+    });
+  }
+  return deadLetterQueue;
 }
 
 export async function enqueueDelivery(
@@ -35,11 +45,32 @@ export async function enqueueDelivery(
     `deliver-${data.eventId}-attempt-${data.attemptNumber}`,
     data,
     {
+      jobId: `deliver-${data.eventId}-${data.endpointId}-attempt-${data.attemptNumber}`,
       attempts: 1,
       delay: delay ?? 0,
       removeOnComplete: { count: 1000 },
       removeOnFail: { count: 5000 },
     },
+  );
+  return job.id ?? "";
+}
+
+export async function enqueueDeadLetter(
+  data: DeliveryJobData,
+  reason: string,
+): Promise<string> {
+  const queue = getDeadLetterQueue();
+  const job = await queue.add(
+    `dead-${data.eventId}-attempt-${data.attemptNumber}`,
+    { ...data },
+    {
+      attempts: 1,
+      removeOnComplete: { count: 5000 },
+      removeOnFail: { count: 10000 },
+    },
+  );
+  console.warn(
+    `Moved to dead-letter queue: event=${data.eventId} endpoint=${data.endpointId} reason=${reason} job=${job.id}`,
   );
   return job.id ?? "";
 }

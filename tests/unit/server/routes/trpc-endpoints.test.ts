@@ -28,7 +28,7 @@ const mockedDelete = vi.mocked(deleteEndpoint);
 const createCaller = createCallerFactory(endpointRouter);
 
 const sampleEndpoint = {
-  id: "ep-1",
+  id: "550e8400-e29b-41d4-a716-446655440000",
   userId: "user-a",
   url: "https://example.com/webhook",
   name: "Example Endpoint",
@@ -72,7 +72,7 @@ describe("endpoint router — create", () => {
       url: "https://example.com/webhook",
       name: "Example Endpoint",
     });
-    expect(result.id).toBe("ep-1");
+    expect(result.id).toBe("550e8400-e29b-41d4-a716-446655440000");
     expect(result.signingSecret).toBe("whsec_testsecret");
   });
 
@@ -111,7 +111,7 @@ describe("endpoint router — list", () => {
     const result = await caller.list();
     expect(mockedList).toHaveBeenCalledWith("user-a");
     expect(result).toHaveLength(1);
-    expect(result[0]!.id).toBe("ep-1");
+    expect(result[0]!.id).toBe("550e8400-e29b-41d4-a716-446655440000");
   });
 });
 
@@ -123,7 +123,7 @@ describe("endpoint router — get", () => {
   it("throws UNAUTHORIZED without userId", async () => {
     const caller = createCaller({});
     await expect(
-      caller.get({ id: "ep-1" }),
+      caller.get({ id: "550e8400-e29b-41d4-a716-446655440000" }),
     ).rejects.toThrow("Authentication required");
   });
 
@@ -131,8 +131,8 @@ describe("endpoint router — get", () => {
     mockedGet.mockResolvedValue(null);
     const caller = createCaller({ userId: "user-b" });
 
-    const result = await caller.get({ id: "ep-1" });
-    expect(mockedGet).toHaveBeenCalledWith("ep-1", "user-b");
+    const result = await caller.get({ id: "550e8400-e29b-41d4-a716-446655440000" });
+    expect(mockedGet).toHaveBeenCalledWith("550e8400-e29b-41d4-a716-446655440000", "user-b");
     expect(result).toBeNull();
   });
 
@@ -140,10 +140,10 @@ describe("endpoint router — get", () => {
     mockedGet.mockResolvedValue(sampleEndpoint as never);
     const caller = createCaller({ userId: "user-a" });
 
-    const result = await caller.get({ id: "ep-1" });
-    expect(mockedGet).toHaveBeenCalledWith("ep-1", "user-a");
+    const result = await caller.get({ id: "550e8400-e29b-41d4-a716-446655440000" });
+    expect(mockedGet).toHaveBeenCalledWith("550e8400-e29b-41d4-a716-446655440000", "user-a");
     expect(result).not.toBeNull();
-    expect(result!.id).toBe("ep-1");
+    expect(result!.id).toBe("550e8400-e29b-41d4-a716-446655440000");
   });
 });
 
@@ -155,7 +155,7 @@ describe("endpoint router — update", () => {
   it("throws UNAUTHORIZED without userId", async () => {
     const caller = createCaller({});
     await expect(
-      caller.update({ id: "ep-1", url: "https://new.example.com" }),
+      caller.update({ id: "550e8400-e29b-41d4-a716-446655440000", url: "https://new.example.com" }),
     ).rejects.toThrow("Authentication required");
   });
 
@@ -164,7 +164,7 @@ describe("endpoint router — update", () => {
     const caller = createCaller({ userId: "user-b" });
 
     await expect(
-      caller.update({ id: "ep-1", url: "https://new.example.com" }),
+      caller.update({ id: "550e8400-e29b-41d4-a716-446655440000", url: "https://new.example.com" }),
     ).rejects.toThrow("Endpoint not found");
     expect(mockedUpdate).not.toHaveBeenCalled();
   });
@@ -176,13 +176,13 @@ describe("endpoint router — update", () => {
     const caller = createCaller({ userId: "user-a" });
 
     const result = await caller.update({
-      id: "ep-1",
+      id: "550e8400-e29b-41d4-a716-446655440000",
       url: "https://new.example.com",
     });
 
-    expect(mockedGet).toHaveBeenCalledWith("ep-1", "user-a");
+    expect(mockedGet).toHaveBeenCalledWith("550e8400-e29b-41d4-a716-446655440000", "user-a");
     expect(mockedUpdate).toHaveBeenCalledWith(
-      "ep-1",
+      "550e8400-e29b-41d4-a716-446655440000",
       { url: "https://new.example.com" },
       "user-a",
     );
@@ -198,7 +198,7 @@ describe("endpoint router — delete", () => {
   it("throws UNAUTHORIZED without userId", async () => {
     const caller = createCaller({});
     await expect(
-      caller.delete({ id: "ep-1" }),
+      caller.delete({ id: "550e8400-e29b-41d4-a716-446655440000" }),
     ).rejects.toThrow("Authentication required");
   });
 
@@ -207,7 +207,7 @@ describe("endpoint router — delete", () => {
     const caller = createCaller({ userId: "user-b" });
 
     await expect(
-      caller.delete({ id: "ep-1" }),
+      caller.delete({ id: "550e8400-e29b-41d4-a716-446655440000" }),
     ).rejects.toThrow("Endpoint not found");
     expect(mockedDelete).not.toHaveBeenCalled();
   });
@@ -217,10 +217,10 @@ describe("endpoint router — delete", () => {
     mockedDelete.mockResolvedValue(undefined as never);
     const caller = createCaller({ userId: "user-a" });
 
-    const result = await caller.delete({ id: "ep-1" });
+    const result = await caller.delete({ id: "550e8400-e29b-41d4-a716-446655440000" });
 
-    expect(mockedGet).toHaveBeenCalledWith("ep-1", "user-a");
-    expect(mockedDelete).toHaveBeenCalledWith("ep-1", "user-a");
+    expect(mockedGet).toHaveBeenCalledWith("550e8400-e29b-41d4-a716-446655440000", "user-a");
+    expect(mockedDelete).toHaveBeenCalledWith("550e8400-e29b-41d4-a716-446655440000", "user-a");
     expect(result).toEqual({ success: true });
   });
 });

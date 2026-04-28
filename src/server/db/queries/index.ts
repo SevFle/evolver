@@ -2,6 +2,7 @@ import { eq, desc, and } from "drizzle-orm";
 import { db } from "@/server/db";
 import { endpoints, events, deliveries, apiKeys } from "@/server/db/schema";
 import type { CreateEndpointRequest, SendEventRequest } from "@/types";
+import type { DeliveryStatus } from "@/server/db/schema/enums";
 import { generateSigningSecret } from "@/server/services/signing";
 import { generateApiKey, hashApiKey } from "@/server/auth/api-keys";
 
@@ -103,17 +104,38 @@ export async function getEventsByEndpointId(endpointId: string, userId?: string,
     .limit(limit);
 }
 
+export async function getSuccessfulDelivery(
+  eventId: string,
+  endpointId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: deliveries.id })
+    .from(deliveries)
+    .where(
+      and(
+        eq(deliveries.eventId, eventId),
+        eq(deliveries.endpointId, endpointId),
+        eq(deliveries.status, "success"),
+      ),
+    )
+    .limit(1);
+  return !!row;
+}
+
 export async function createDelivery(data: {
   eventId: string;
   endpointId: string;
   userId: string;
   attemptNumber: number;
-  statusCode?: number | null;
+  responseStatusCode?: number | null;
   responseBody?: string | null;
   responseHeaders?: Record<string, string> | null;
+  requestHeaders?: Record<string, string> | null;
   durationMs?: number | null;
-  status: "pending" | "success" | "failed";
+  errorMessage?: string | null;
+  status: DeliveryStatus;
   nextRetryAt?: Date | null;
+  completedAt?: Date | null;
 }) {
   const [delivery] = await db
     .insert(deliveries)

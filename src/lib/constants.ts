@@ -10,3 +10,4 @@ export const CIRCUIT_BREAKER_THRESHOLD = 5;
 export const DELIVERY_TIMEOUT_MS = 30_000;
 
 export const MAX_PAYLOAD_SIZE_BYTES = 512 * 1024;
+export const MAX_PAYLOAD_RESPONSE_SIZE = 10 * 1024;

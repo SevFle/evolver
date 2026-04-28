@@ -44,3 +44,4 @@ export type Delivery = typeof deliveries.$inferSelect;
 export type NewDelivery = typeof deliveries.$inferInsert;
 export type Team = typeof teams.$inferSelect;
 export type NewTeam = typeof teams.$inferInsert;
+export type DeliveryInsert = typeof deliveries.$inferInsert;
