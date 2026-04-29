@@ -66,4 +66,7 @@ export interface SendEventRequest {
   endpointId: string;
   payload: Record<string, unknown>;
   eventType: string;
+  idempotencyKey?: string;
+  metadata?: Record<string, unknown>;
+  source?: string;
 }

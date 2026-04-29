@@ -44,6 +44,9 @@ export const eventRouter = router({
         endpointId: input.endpointId,
         payload: input.payload,
         eventType: input.eventType,
+        idempotencyKey: input.idempotencyKey,
+        metadata: input.metadata,
+        source: input.source,
       });
 
       if (!event) {

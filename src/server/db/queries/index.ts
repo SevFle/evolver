@@ -135,6 +135,9 @@ export async function createEvent(data: SendEventRequest & { endpointGroupId?: s
       endpointGroupId,
       payload: data.payload,
       eventType: data.eventType,
+      idempotencyKey: data.idempotencyKey ?? null,
+      metadata: data.metadata ?? {},
+      source: data.source ?? null,
     })
     .returning();
   return event;

@@ -8,6 +8,13 @@
       "when": 1777438044508,
       "tag": "0000_steep_silver_centurion",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777469619337,
+      "tag": "0001_giant_squirrel_girl",
+      "breakpoints": true
     }
   ]
 }

@@ -9,6 +9,9 @@ const sendEventSchema = z.object({
   endpointId: z.string().min(1),
   payload: z.record(z.unknown()),
   eventType: z.string().min(1).max(255),
+  idempotencyKey: z.string().max(255).optional(),
+  metadata: z.record(z.unknown()).optional(),
+  source: z.string().max(255).optional(),
 });
 
 export async function POST(req: NextRequest) {
