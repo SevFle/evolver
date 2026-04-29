@@ -75,17 +75,27 @@ describe("email service", () => {
       expect(result2).toBe("OK");
     });
 
-    it("resetRateLimits clears all rate limit keys from Redis via SCAN", async () => {
+    it("resetRateLimits batches deletes inside the SCAN loop per page", async () => {
       mockRedis.scan
         .mockResolvedValueOnce(["1", ["hookrelay:alert:ep-001"]])
         .mockResolvedValueOnce(["0", ["hookrelay:alert:ep-002"]]);
       await resetRateLimits();
       expect(mockRedis.scan).toHaveBeenCalledWith("0", "MATCH", "hookrelay:alert:*", "COUNT", 100);
       expect(mockRedis.scan).toHaveBeenCalledTimes(2);
-      expect(mockRedis.del).toHaveBeenCalledWith(
-        "hookrelay:alert:ep-001",
-        "hookrelay:alert:ep-002",
-      );
+      expect(mockRedis.del).toHaveBeenCalledTimes(2);
+      expect(mockRedis.del).toHaveBeenNthCalledWith(1, "hookrelay:alert:ep-001");
+      expect(mockRedis.del).toHaveBeenNthCalledWith(2, "hookrelay:alert:ep-002");
+    });
+
+    it("resetRateLimits deletes each SCAN batch immediately", async () => {
+      mockRedis.scan
+        .mockResolvedValueOnce(["1", ["hookrelay:alert:ep-a", "hookrelay:alert:ep-b"]])
+        .mockResolvedValueOnce(["2", ["hookrelay:alert:ep-c"]])
+        .mockResolvedValueOnce(["0", []]);
+      await resetRateLimits();
+      expect(mockRedis.del).toHaveBeenCalledTimes(2);
+      expect(mockRedis.del).toHaveBeenNthCalledWith(1, "hookrelay:alert:ep-a", "hookrelay:alert:ep-b");
+      expect(mockRedis.del).toHaveBeenNthCalledWith(2, "hookrelay:alert:ep-c");
     });
 
     it("resetRateLimits does nothing when no keys exist", async () => {
@@ -98,6 +108,15 @@ describe("email service", () => {
       mockRedis.scan.mockResolvedValueOnce(["0", ["hookrelay:alert:ep-001"]]);
       await resetRateLimits();
       expect(mockRedis.scan).toHaveBeenCalledTimes(1);
+      expect(mockRedis.del).toHaveBeenCalledWith("hookrelay:alert:ep-001");
+    });
+
+    it("resetRateLimits skips del when SCAN returns empty batch with non-zero cursor", async () => {
+      mockRedis.scan
+        .mockResolvedValueOnce(["1", []])
+        .mockResolvedValueOnce(["0", ["hookrelay:alert:ep-001"]]);
+      await resetRateLimits();
+      expect(mockRedis.del).toHaveBeenCalledTimes(1);
       expect(mockRedis.del).toHaveBeenCalledWith("hookrelay:alert:ep-001");
     });
 
@@ -303,5 +322,91 @@ describe("email service", () => {
       if (originalKey) process.env.RESEND_API_KEY = originalKey;
       else delete process.env.RESEND_API_KEY;
     });
+  });
+});
+
+describe("ALERT_TTL_SECONDS guard", () => {
+  const ttlMockRedis = {
+    set: vi.fn().mockResolvedValue("OK"),
+    scan: vi.fn().mockResolvedValue(["0", []]),
+    del: vi.fn().mockResolvedValue(0),
+  };
+
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+  });
+
+  it("uses correct TTL with default EMAIL_RATE_LIMIT_MS", async () => {
+    vi.doMock("@/server/redis", () => ({
+      getRedis: () => ttlMockRedis,
+    }));
+
+    const { markSent } = await import("@/server/services/email");
+    await markSent("ep-001");
+
+    expect(ttlMockRedis.set).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      "EX",
+      3600,
+      "NX",
+    );
+  });
+
+  it("enforces minimum TTL of 1 when EMAIL_RATE_LIMIT_MS is very small", async () => {
+    vi.doMock("@/lib/constants", () => ({
+      EMAIL_RATE_LIMIT_MS: 0,
+      DEFAULT_EMAIL_FROM: "alerts@hookrelay.dev",
+      EMAIL_ALERT_THRESHOLD: 5,
+    }));
+    vi.doMock("@/server/redis", () => ({
+      getRedis: () => ttlMockRedis,
+    }));
+
+    const { markSent } = await import("@/server/services/email");
+    await markSent("ep-001");
+
+    const ttlArg = ttlMockRedis.set.mock.calls[0]?.[3];
+    expect(ttlArg).toBeGreaterThanOrEqual(1);
+  });
+
+  it("enforces minimum TTL of 1 when EMAIL_RATE_LIMIT_MS is negative", async () => {
+    vi.doMock("@/lib/constants", () => ({
+      EMAIL_RATE_LIMIT_MS: -5000,
+      DEFAULT_EMAIL_FROM: "alerts@hookrelay.dev",
+      EMAIL_ALERT_THRESHOLD: 5,
+    }));
+    vi.doMock("@/server/redis", () => ({
+      getRedis: () => ttlMockRedis,
+    }));
+
+    const { markSent } = await import("@/server/services/email");
+    await markSent("ep-001");
+
+    const ttlArg = ttlMockRedis.set.mock.calls[0]?.[3];
+    expect(ttlArg).toBeGreaterThanOrEqual(1);
+  });
+
+  it("computes TTL correctly from EMAIL_RATE_LIMIT_MS", async () => {
+    vi.doMock("@/lib/constants", () => ({
+      EMAIL_RATE_LIMIT_MS: 1800_000,
+      DEFAULT_EMAIL_FROM: "alerts@hookrelay.dev",
+      EMAIL_ALERT_THRESHOLD: 5,
+    }));
+    vi.doMock("@/server/redis", () => ({
+      getRedis: () => ttlMockRedis,
+    }));
+
+    const { markSent } = await import("@/server/services/email");
+    await markSent("ep-001");
+
+    expect(ttlMockRedis.set).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      "EX",
+      1800,
+      "NX",
+    );
   });
 });

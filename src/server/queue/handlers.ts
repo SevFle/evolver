@@ -180,7 +180,11 @@ async function handleFailedDelivery(
           console.error(`Failed to send failure alert for endpoint ${endpoint.id}: ${result.error}`);
         }
       } catch (err) {
-        await clearAlertRateLimit(endpoint.id);
+        try {
+          await clearAlertRateLimit(endpoint.id);
+        } catch {
+          // best-effort: don't let clearAlertRateLimit failure mask the original error
+        }
         console.error(`Failed to send failure alert for endpoint ${endpoint.id}:`, err);
       }
     }

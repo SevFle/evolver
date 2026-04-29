@@ -2,7 +2,7 @@ import { EMAIL_RATE_LIMIT_MS, DEFAULT_EMAIL_FROM, EMAIL_ALERT_THRESHOLD } from "
 import { getRedis } from "@/server/redis";
 
 const ALERT_KEY_PREFIX = "hookrelay:alert:";
-const ALERT_TTL_SECONDS = Math.floor(EMAIL_RATE_LIMIT_MS / 1000);
+const ALERT_TTL_SECONDS = Math.max(1, Math.floor(EMAIL_RATE_LIMIT_MS / 1000));
 
 export async function markSent(endpointId: string): Promise<string | null> {
   const redis = getRedis();
@@ -12,7 +12,6 @@ export async function markSent(endpointId: string): Promise<string | null> {
 export async function resetRateLimits(): Promise<void> {
   const redis = getRedis();
   const pattern = `${ALERT_KEY_PREFIX}*`;
-  const keys: string[] = [];
   let cursor = "0";
   do {
     const [nextCursor, batch] = await redis.scan(
@@ -23,11 +22,10 @@ export async function resetRateLimits(): Promise<void> {
       100,
     );
     cursor = nextCursor;
-    keys.push(...batch);
+    if (batch.length > 0) {
+      await redis.del(...batch);
+    }
   } while (cursor !== "0");
-  if (keys.length > 0) {
-    await redis.del(...keys);
-  }
 }
 
 export async function clearAlertRateLimit(endpointId: string): Promise<void> {

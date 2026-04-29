@@ -95,6 +95,100 @@ describe("redis", () => {
     consoleErrorSpy.mockRestore();
   });
 
+  describe("SSRF protection and TLS config", () => {
+    it("sets servername to hostname from rediss:// URL to prevent TLS bypass", async () => {
+      process.env.REDIS_URL = "rediss://:password@my-redis.example.com:6380/2";
+      const { getRedis } = await import("@/server/redis");
+      getRedis();
+
+      expect(Redis).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          tls: expect.objectContaining({
+            servername: "my-redis.example.com",
+          }),
+        }),
+      );
+    });
+
+    it("sets rejectUnauthorized to true for rediss:// URLs", async () => {
+      process.env.REDIS_URL = "rediss://:token@redis.cloud:6379";
+      const { getRedis } = await import("@/server/redis");
+      getRedis();
+
+      expect(Redis).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          tls: expect.objectContaining({
+            rejectUnauthorized: true,
+          }),
+        }),
+      );
+    });
+
+    it("does not set tls for non-TLS redis:// URL even with port 6380", async () => {
+      process.env.REDIS_URL = "redis://host:6380/0";
+      const { getRedis } = await import("@/server/redis");
+      getRedis();
+
+      const callArgs = (Redis as unknown as { mock: { calls: [string, Record<string, unknown>][] } }).mock.calls[0];
+      const options = callArgs?.[1];
+      expect(options?.tls).toBeUndefined();
+    });
+
+    it("handles rediss:// URL with complex hostname", async () => {
+      process.env.REDIS_URL = "rediss://user:pass@redis-cluster.us-east-1.ec2.cloud.redislabs.com:19310/0";
+      const { getRedis } = await import("@/server/redis");
+      getRedis();
+
+      expect(Redis).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          tls: expect.objectContaining({
+            servername: "redis-cluster.us-east-1.ec2.cloud.redislabs.com",
+          }),
+        }),
+      );
+    });
+
+    it("parses servername from rediss:// URL without port", async () => {
+      process.env.REDIS_URL = "rediss://redis.internal:6379";
+      const { getRedis } = await import("@/server/redis");
+      getRedis();
+
+      expect(Redis).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          tls: expect.objectContaining({
+            servername: "redis.internal",
+          }),
+        }),
+      );
+    });
+  });
+
+  describe("connection config defaults", () => {
+    it("sets maxRetriesPerRequest to 3 for URL-based connections", async () => {
+      process.env.REDIS_URL = "redis://localhost:6379";
+      const { getRedis } = await import("@/server/redis");
+      getRedis();
+
+      expect(Redis).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ maxRetriesPerRequest: 3 }),
+      );
+    });
+
+    it("sets maxRetriesPerRequest to 3 for default connections", async () => {
+      const { getRedis } = await import("@/server/redis");
+      getRedis();
+
+      expect(Redis).toHaveBeenCalledWith(
+        expect.objectContaining({ maxRetriesPerRequest: 3 }),
+      );
+    });
+  });
+
   describe("closeRedis", () => {
     it("calls quit and nulls the reference", async () => {
       const { getRedis, closeRedis } = await import("@/server/redis");
