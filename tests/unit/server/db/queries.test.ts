@@ -207,3 +207,59 @@ describe("queries — createReplayEvent nullability validation", () => {
     expect(result).toEqual({ id: "new-evt-2" });
   });
 });
+
+describe("queries — createEvent nullability validation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("throws BAD_REQUEST when both endpointId and endpointGroupId are null", async () => {
+    const { createEvent } = await import("@/server/db/queries");
+    await expect(
+      createEvent({
+        userId: "user-1",
+        endpointId: undefined as unknown as string,
+        endpointGroupId: null,
+        payload: { test: true },
+        eventType: "test.event",
+      }),
+    ).rejects.toThrow("Must provide endpointId or endpointGroupId");
+    try {
+      await createEvent({
+        userId: "user-1",
+        endpointId: undefined as unknown as string,
+        endpointGroupId: null,
+        payload: { test: true },
+        eventType: "test.event",
+      });
+    } catch (err) {
+      expect(err).toBeInstanceOf(TRPCError);
+      expect((err as TRPCError).code).toBe("BAD_REQUEST");
+    }
+  });
+
+  it("succeeds when endpointGroupId is provided without endpointId", async () => {
+    mockInsertReturning.mockReturnValueOnce([{ id: "new-evt-3" }]);
+    const { createEvent } = await import("@/server/db/queries");
+    const result = await createEvent({
+      userId: "user-1",
+      endpointId: undefined as unknown as string,
+      endpointGroupId: "eg-1",
+      payload: { test: true },
+      eventType: "test.event",
+    });
+    expect(result).toEqual({ id: "new-evt-3" });
+  });
+
+  it("succeeds when endpointId is provided", async () => {
+    mockInsertReturning.mockReturnValueOnce([{ id: "new-evt-4" }]);
+    const { createEvent } = await import("@/server/db/queries");
+    const result = await createEvent({
+      userId: "user-1",
+      endpointId: "ep-1",
+      payload: { test: true },
+      eventType: "test.event",
+    });
+    expect(result).toEqual({ id: "new-evt-4" });
+  });
+});

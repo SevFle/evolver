@@ -22,6 +22,14 @@ describe("schema field completeness", () => {
     expect(events.replayedFromEventId).toBeDefined();
   });
 
+  it("events table has endpointGroupId column", () => {
+    expect(events.endpointGroupId).toBeDefined();
+  });
+
+  it("events table has idempotencyKey column", () => {
+    expect(events.idempotencyKey).toBeDefined();
+  });
+
   it("endpoints table has signingSecret column", () => {
     expect(endpoints.signingSecret).toBeDefined();
   });
@@ -127,5 +135,16 @@ describe("migration SQL completeness", () => {
     expect(sql).toContain(
       'WHERE "events"."idempotency_key" is not null',
     );
+  });
+});
+
+describe("schema relations", () => {
+  it("eventsRelations defines self-referential replayedFrom with eventReplayLineage relationName", async () => {
+    const source = await import("fs").then((fs) =>
+      fs.promises.readFile("src/server/db/schema/relations.ts", "utf-8"),
+    );
+    expect(source).toContain("replayedFromEventId");
+    expect(source).toContain('relationName: "eventReplayLineage"');
+    expect(source).toContain("replays: many(events");
   });
 });
