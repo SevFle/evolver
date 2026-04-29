@@ -59,6 +59,8 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
 
     const success = isSuccessfulDelivery(result.statusCode);
 
+    const isReplay = !!event.replayedFromEventId;
+
     await createDelivery({
       eventId: event.id,
       endpointId: endpoint.id,
@@ -71,6 +73,7 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
       durationMs: result.durationMs,
       status: success ? "success" : "failed",
       completedAt: success ? new Date() : null,
+      isReplay,
     });
 
     if (success) {
@@ -91,6 +94,8 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown delivery error";
 
+    const isReplay = !!event.replayedFromEventId;
+
     const requestHeaders: Record<string, string> = {
       "Content-Type": "application/json",
       "X-HookRelay-Event-ID": event.id,
@@ -105,6 +110,7 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
       status: "failed",
       requestHeaders,
       errorMessage,
+      isReplay,
     });
 
     await handleFailedDelivery(

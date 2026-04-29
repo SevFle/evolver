@@ -203,6 +203,7 @@ export async function createDelivery(data: {
   status: DeliveryStatus;
   nextRetryAt?: Date | null;
   completedAt?: Date | null;
+  isReplay?: boolean;
 }) {
   const [delivery] = await db
     .insert(deliveries)

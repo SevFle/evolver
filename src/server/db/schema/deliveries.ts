@@ -5,6 +5,7 @@ import {
   timestamp,
   jsonb,
   integer,
+  boolean,
   index,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -42,6 +43,7 @@ export const deliveries = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
+    isReplay: boolean("is_replay").default(false).notNull(),
     completedAt: timestamp("completed_at", { withTimezone: true }),
   },
   (table) => ({
