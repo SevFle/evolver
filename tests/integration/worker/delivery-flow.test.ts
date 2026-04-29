@@ -22,9 +22,40 @@ vi.mock("@/server/queue/producer", () => ({
   enqueueDeadLetter: vi.fn(),
 }));
 
-vi.mock("@/server/services/email", () => ({
-  sendFailureAlert: vi.fn().mockResolvedValue({ success: true, provider: "log" }),
+const mockRedisStore = new Set<string>();
+
+const mockRedis = {
+  exists: vi.fn((key: string) => Promise.resolve(mockRedisStore.has(key) ? 1 : 0)),
+  set: vi.fn((...args: unknown[]) => {
+    const key = args[0] as string;
+    const hasNx = args.includes("NX");
+    if (hasNx && mockRedisStore.has(key)) {
+      return Promise.resolve(null);
+    }
+    mockRedisStore.add(key);
+    return Promise.resolve("OK");
+  }),
+  scan: vi.fn((_cursor: string) => {
+    const keys = [...mockRedisStore].filter(k => k.startsWith("hookrelay:alert:"));
+    return Promise.resolve(["0", keys]);
+  }),
+  del: vi.fn((...keys: string[]) => {
+    keys.forEach(k => mockRedisStore.delete(k));
+    return Promise.resolve(keys.length);
+  }),
+};
+
+vi.mock("@/server/redis", () => ({
+  getRedis: () => mockRedis,
 }));
+
+vi.mock("@/server/services/email", async () => {
+  const actual = await vi.importActual<typeof import("@/server/services/email")>("@/server/services/email");
+  return {
+    ...actual,
+    sendFailureAlert: vi.fn().mockResolvedValue({ success: true, provider: "log" }),
+  };
+});
 
 import { handleDelivery } from "@/server/queue/handlers";
 import {
@@ -40,7 +71,7 @@ import {
 } from "@/server/db/queries";
 import { deliverWebhook, isSuccessfulDelivery } from "@/server/services/delivery";
 import { enqueueDelivery, enqueueDeadLetter } from "@/server/queue/producer";
-import { sendFailureAlert } from "@/server/services/email";
+import { sendFailureAlert, resetRateLimits } from "@/server/services/email";
 
 const mockEvent = {
   id: "evt-001",
@@ -88,8 +119,10 @@ const mockDeliveryResult = {
   },
 };
 
-beforeEach(() => {
+beforeEach(async () => {
+  mockRedisStore.clear();
   vi.clearAllMocks();
+  await resetRateLimits();
   vi.mocked(getSuccessfulDelivery).mockResolvedValue(false);
   vi.mocked(getEventById).mockResolvedValue(mockEvent);
   vi.mocked(getEndpointById).mockResolvedValue(mockEndpoint);
@@ -328,6 +361,49 @@ describe("handleDelivery - full delivery flow", () => {
     );
   });
 
+  it("sends alert even when consecutive failures exceed threshold", async () => {
+    vi.mocked(deliverWebhook).mockResolvedValue({
+      ...mockDeliveryResult,
+      statusCode: 500,
+    });
+    vi.mocked(getConsecutiveFailures).mockResolvedValue(6);
+
+    await handleDelivery({
+      eventId: "evt-001",
+      endpointId: "ep-001",
+      attemptNumber: 1,
+    });
+
+    expect(updateEndpoint).toHaveBeenCalledWith("ep-001", {
+      status: "degraded",
+    });
+    expect(sendFailureAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        endpointId: "ep-001",
+        failureCount: 6,
+      }),
+    );
+  });
+
+  it("does not send alert when rate limited for same endpoint", async () => {
+    vi.mocked(deliverWebhook).mockResolvedValue({
+      ...mockDeliveryResult,
+      statusCode: 500,
+    });
+    vi.mocked(getConsecutiveFailures).mockResolvedValue(5);
+
+    const { markSent } = await import("@/server/services/email");
+    await markSent("ep-001");
+
+    await handleDelivery({
+      eventId: "evt-001",
+      endpointId: "ep-001",
+      attemptNumber: 1,
+    });
+
+    expect(sendFailureAlert).not.toHaveBeenCalled();
+  });
+
   it("resets endpoint status to active after successful delivery from degraded", async () => {
     vi.mocked(getEndpointById).mockResolvedValue({
       ...mockEndpoint,
@@ -421,6 +497,69 @@ describe("handleDelivery - full delivery flow", () => {
         requestHeaders: mockDeliveryResult.requestHeaders,
       }),
     );
+  });
+  it("clears rate limit key when sendFailureAlert fails", async () => {
+    vi.mocked(deliverWebhook).mockResolvedValue({
+      ...mockDeliveryResult,
+      statusCode: 500,
+    });
+    vi.mocked(getConsecutiveFailures).mockResolvedValue(5);
+    vi.mocked(sendFailureAlert).mockResolvedValueOnce({ success: false, provider: "resend", error: "RESEND_API_KEY not configured" });
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await handleDelivery({
+      eventId: "evt-001",
+      endpointId: "ep-001",
+      attemptNumber: 1,
+    });
+
+    consoleWarnSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
+    expect(sendFailureAlert).toHaveBeenCalled();
+    expect(mockRedisStore.has("hookrelay:alert:ep-001")).toBe(false);
+  });
+
+  it("clears rate limit key when alert sending throws", async () => {
+    vi.mocked(deliverWebhook).mockResolvedValue({
+      ...mockDeliveryResult,
+      statusCode: 500,
+    });
+    vi.mocked(getConsecutiveFailures).mockResolvedValue(5);
+    vi.mocked(getUserById).mockRejectedValueOnce(new Error("DB connection lost"));
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await handleDelivery({
+      eventId: "evt-001",
+      endpointId: "ep-001",
+      attemptNumber: 1,
+    });
+
+    consoleWarnSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
+    expect(mockRedisStore.has("hookrelay:alert:ep-001")).toBe(false);
+  });
+
+  it("clears rate limit key when user not found", async () => {
+    vi.mocked(deliverWebhook).mockResolvedValue({
+      ...mockDeliveryResult,
+      statusCode: 500,
+    });
+    vi.mocked(getConsecutiveFailures).mockResolvedValue(5);
+    vi.mocked(getUserById).mockResolvedValueOnce(null);
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await handleDelivery({
+      eventId: "evt-001",
+      endpointId: "ep-001",
+      attemptNumber: 1,
+    });
+
+    consoleWarnSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
+    expect(mockRedisStore.has("hookrelay:alert:ep-001")).toBe(false);
   });
 });
 

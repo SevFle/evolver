@@ -1,13 +1,23 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
-  isRateLimited,
   markSent,
   resetRateLimits,
+  clearAlertRateLimit,
   composeFailureAlertEmail,
   sendFailureAlert,
   sendEmail,
   type AlertPayload,
 } from "@/server/services/email";
+
+const mockRedis = {
+  set: vi.fn().mockResolvedValue("OK"),
+  scan: vi.fn().mockResolvedValue(["0", []]),
+  del: vi.fn().mockResolvedValue(0),
+};
+
+vi.mock("@/server/redis", () => ({
+  getRedis: () => mockRedis,
+}));
 
 const baseAlert: AlertPayload = {
   endpointId: "ep-001",
@@ -21,42 +31,79 @@ const baseAlert: AlertPayload = {
 
 describe("email service", () => {
   beforeEach(() => {
-    resetRateLimits();
+    vi.clearAllMocks();
+    mockRedis.set.mockResolvedValue("OK");
+    mockRedis.scan.mockResolvedValue(["0", []]);
+    mockRedis.del.mockResolvedValue(0);
   });
 
-  describe("rate limiting", () => {
-    it("is not rate-limited for a new endpoint", () => {
-      expect(isRateLimited("ep-new")).toBe(false);
+  describe("rate limiting via markSent atomic gate", () => {
+    it("markSent sets Redis key with correct TTL and NX flag", async () => {
+      await markSent("ep-001");
+      expect(mockRedis.set).toHaveBeenCalledWith(
+        "hookrelay:alert:ep-001",
+        "1",
+        "EX",
+        3600,
+        "NX",
+      );
     });
 
-    it("is rate-limited after marking as sent", () => {
-      markSent("ep-001");
-      expect(isRateLimited("ep-001")).toBe(true);
+    it("markSent returns OK on first call (key not set)", async () => {
+      mockRedis.set.mockResolvedValueOnce("OK");
+      const result = await markSent("ep-001");
+      expect(result).toBe("OK");
     });
 
-    it("is not rate-limited for a different endpoint", () => {
-      markSent("ep-001");
-      expect(isRateLimited("ep-002")).toBe(false);
+    it("markSent returns null when key already exists (rate-limited)", async () => {
+      mockRedis.set.mockResolvedValueOnce("OK");
+      mockRedis.set.mockResolvedValueOnce(null);
+
+      const first = await markSent("ep-001");
+      expect(first).toBe("OK");
+
+      const second = await markSent("ep-001");
+      expect(second).toBeNull();
     });
 
-    it("becomes unblocked after the rate limit window passes", () => {
-      const now = Date.now();
-      markSent("ep-001", now - 60 * 60 * 1000 - 1);
-      expect(isRateLimited("ep-001", now)).toBe(false);
+    it("markSent gates alerts independently per endpoint", async () => {
+      mockRedis.set.mockImplementation(async (_key: string) => "OK");
+      const result1 = await markSent("ep-001");
+      expect(result1).toBe("OK");
+
+      const result2 = await markSent("ep-002");
+      expect(result2).toBe("OK");
     });
 
-    it("remains blocked just before the rate limit window expires", () => {
-      const now = Date.now();
-      markSent("ep-001", now - 60 * 60 * 1000 + 1000);
-      expect(isRateLimited("ep-001", now)).toBe(true);
+    it("resetRateLimits clears all rate limit keys from Redis via SCAN", async () => {
+      mockRedis.scan
+        .mockResolvedValueOnce(["1", ["hookrelay:alert:ep-001"]])
+        .mockResolvedValueOnce(["0", ["hookrelay:alert:ep-002"]]);
+      await resetRateLimits();
+      expect(mockRedis.scan).toHaveBeenCalledWith("0", "MATCH", "hookrelay:alert:*", "COUNT", 100);
+      expect(mockRedis.scan).toHaveBeenCalledTimes(2);
+      expect(mockRedis.del).toHaveBeenCalledWith(
+        "hookrelay:alert:ep-001",
+        "hookrelay:alert:ep-002",
+      );
     });
 
-    it("resetRateLimits clears all rate limit state", () => {
-      markSent("ep-001");
-      markSent("ep-002");
-      resetRateLimits();
-      expect(isRateLimited("ep-001")).toBe(false);
-      expect(isRateLimited("ep-002")).toBe(false);
+    it("resetRateLimits does nothing when no keys exist", async () => {
+      mockRedis.scan.mockResolvedValue(["0", []]);
+      await resetRateLimits();
+      expect(mockRedis.del).not.toHaveBeenCalled();
+    });
+
+    it("resetRateLimits handles single-page SCAN result", async () => {
+      mockRedis.scan.mockResolvedValueOnce(["0", ["hookrelay:alert:ep-001"]]);
+      await resetRateLimits();
+      expect(mockRedis.scan).toHaveBeenCalledTimes(1);
+      expect(mockRedis.del).toHaveBeenCalledWith("hookrelay:alert:ep-001");
+    });
+
+    it("clearAlertRateLimit deletes the rate limit key for an endpoint", async () => {
+      await clearAlertRateLimit("ep-001");
+      expect(mockRedis.del).toHaveBeenCalledWith("hookrelay:alert:ep-001");
     });
   });
 
@@ -140,9 +187,21 @@ describe("email service", () => {
   });
 
   describe("sendFailureAlert", () => {
-    it("sends when threshold is met and not rate-limited", async () => {
+    it("sends when threshold is met", async () => {
       const result = await sendFailureAlert(baseAlert);
       expect(result.success).toBe(true);
+    });
+
+    it("returns failure when email provider fails", async () => {
+      const original = process.env.EMAIL_PROVIDER;
+      const originalKey = process.env.RESEND_API_KEY;
+      process.env.EMAIL_PROVIDER = "resend";
+      delete process.env.RESEND_API_KEY;
+      const result = await sendFailureAlert(baseAlert);
+      expect(result.success).toBe(false);
+      process.env.EMAIL_PROVIDER = original;
+      if (originalKey) process.env.RESEND_API_KEY = originalKey;
+      else delete process.env.RESEND_API_KEY;
     });
 
     it("skips when failure count is below threshold", async () => {
@@ -152,21 +211,26 @@ describe("email service", () => {
       expect(result.provider).toBe("skipped");
     });
 
-    it("rate-limits after the first alert for the same endpoint", async () => {
+    it("does not call markSent (rate limiting handled by caller)", async () => {
+      await sendFailureAlert(baseAlert);
+      expect(mockRedis.set).not.toHaveBeenCalled();
+    });
+
+    it("allows sending for different endpoints independently", async () => {
+      const result1 = await sendFailureAlert(baseAlert);
+      expect(result1.success).toBe(true);
+
+      const alert2: AlertPayload = { ...baseAlert, endpointId: "ep-002" };
+      const result2 = await sendFailureAlert(alert2);
+      expect(result2.success).toBe(true);
+    });
+
+    it("sends successfully even when called twice for same endpoint (rate limiting is callers responsibility)", async () => {
       const first = await sendFailureAlert(baseAlert);
       expect(first.success).toBe(true);
 
       const second = await sendFailureAlert(baseAlert);
-      expect(second.success).toBe(false);
-      expect(second.provider).toBe("rate-limited");
-    });
-
-    it("allows alerts for different endpoints independently", async () => {
-      await sendFailureAlert(baseAlert);
-
-      const alert2: AlertPayload = { ...baseAlert, endpointId: "ep-002" };
-      const result = await sendFailureAlert(alert2);
-      expect(result.success).toBe(true);
+      expect(second.success).toBe(true);
     });
   });
 

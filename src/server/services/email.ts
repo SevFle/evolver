@@ -1,19 +1,38 @@
 import { EMAIL_RATE_LIMIT_MS, DEFAULT_EMAIL_FROM, EMAIL_ALERT_THRESHOLD } from "@/lib/constants";
+import { getRedis } from "@/server/redis";
 
-const rateLimitMap = new Map<string, number>();
+const ALERT_KEY_PREFIX = "hookrelay:alert:";
+const ALERT_TTL_SECONDS = Math.floor(EMAIL_RATE_LIMIT_MS / 1000);
 
-export function isRateLimited(endpointId: string, now: number = Date.now()): boolean {
-  const lastSent = rateLimitMap.get(endpointId);
-  if (!lastSent) return false;
-  return now - lastSent < EMAIL_RATE_LIMIT_MS;
+export async function markSent(endpointId: string): Promise<string | null> {
+  const redis = getRedis();
+  return redis.set(`${ALERT_KEY_PREFIX}${endpointId}`, "1", "EX", ALERT_TTL_SECONDS, "NX");
 }
 
-export function markSent(endpointId: string, now: number = Date.now()): void {
-  rateLimitMap.set(endpointId, now);
+export async function resetRateLimits(): Promise<void> {
+  const redis = getRedis();
+  const pattern = `${ALERT_KEY_PREFIX}*`;
+  const keys: string[] = [];
+  let cursor = "0";
+  do {
+    const [nextCursor, batch] = await redis.scan(
+      cursor,
+      "MATCH",
+      pattern,
+      "COUNT",
+      100,
+    );
+    cursor = nextCursor;
+    keys.push(...batch);
+  } while (cursor !== "0");
+  if (keys.length > 0) {
+    await redis.del(...keys);
+  }
 }
 
-export function resetRateLimits(): void {
-  rateLimitMap.clear();
+export async function clearAlertRateLimit(endpointId: string): Promise<void> {
+  const redis = getRedis();
+  await redis.del(`${ALERT_KEY_PREFIX}${endpointId}`);
 }
 
 export interface AlertPayload {
@@ -148,20 +167,10 @@ export async function sendEmail(email: ComposedEmail): Promise<SendResult> {
 }
 
 export async function sendFailureAlert(alert: AlertPayload): Promise<SendResult> {
-  if (isRateLimited(alert.endpointId)) {
-    return { success: false, provider: "rate-limited", error: "Alert rate-limited for this endpoint" };
-  }
-
   if (alert.failureCount < EMAIL_ALERT_THRESHOLD) {
     return { success: false, provider: "skipped", error: "Below alert threshold" };
   }
 
   const email = composeFailureAlertEmail(alert);
-  const result = await sendEmail(email);
-
-  if (result.success) {
-    markSent(alert.endpointId);
-  }
-
-  return result;
+  return sendEmail(email);
 }

@@ -253,7 +253,12 @@ export async function getLastErrorForEndpoint(endpointId: string): Promise<strin
   const [row] = await db
     .select({ errorMessage: deliveries.errorMessage })
     .from(deliveries)
-    .where(eq(deliveries.endpointId, endpointId))
+    .where(
+      and(
+        eq(deliveries.endpointId, endpointId),
+        eq(deliveries.status, "failed"),
+      ),
+    )
     .orderBy(desc(deliveries.createdAt))
     .limit(1);
   return row?.errorMessage ?? null;
