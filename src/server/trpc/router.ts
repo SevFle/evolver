@@ -3,6 +3,7 @@ import { router, protectedProcedure } from "./init";
 import { endpointRouter } from "./routers/endpoints";
 import { eventRouter } from "./routers/events";
 import { analyticsRouter } from "./routers/analytics";
+import { subscriptionRouter } from "./routers/subscriptions";
 import {
   getDeliveriesByEventId,
   getRecentDeliveriesByEndpoint,
@@ -38,6 +39,7 @@ export const appRouter = router({
   deliveries: deliveryRouter,
   apiKeys: apiKeyRouter,
   analytics: analyticsRouter,
+  subscriptions: subscriptionRouter,
 });
 
 export type AppRouter = typeof appRouter;

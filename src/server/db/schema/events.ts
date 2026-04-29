@@ -6,7 +6,6 @@ import {
   jsonb,
   index,
   uniqueIndex,
-  check,
 } from "drizzle-orm/pg-core";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -60,10 +59,6 @@ export const events = pgTable(
     ),
     replayedFromIdx: index("events_replayed_from_idx").on(
       table.replayedFromEventId,
-    ),
-    targetCheck: check(
-      "events_target_check",
-      sql`${table.endpointId} is not null or ${table.endpointGroupId} is not null`,
     ),
   }),
 );

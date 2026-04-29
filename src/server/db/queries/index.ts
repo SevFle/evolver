@@ -8,6 +8,7 @@ import {
   apiKeys,
   endpointGroups,
   endpointGroupMembers,
+  endpointSubscriptions,
 } from "@/server/db/schema";
 import type { CreateEndpointRequest, SendEventRequest } from "@/types";
 import type { DeliveryStatus } from "@/server/db/schema/enums";
@@ -135,12 +136,6 @@ export async function deleteEndpoint(id: string, userId?: string) {
 export async function createEvent(data: SendEventRequest) {
   const endpointId = data.endpointId ?? null;
   const endpointGroupId = data.endpointGroupId ?? null;
-  if (!endpointId && !endpointGroupId) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Must provide endpointId or endpointGroupId",
-    });
-  }
   const [event] = await db
     .insert(events)
     .values({
@@ -731,4 +726,117 @@ export async function resolveFanoutEndpoints(
     code: "BAD_REQUEST",
     message: "Must provide endpointId, endpointIds, or endpointGroupId",
   });
+}
+
+export async function createSubscription(
+  userId: string,
+  endpointId: string,
+  eventType: string,
+) {
+  const endpoint = await getEndpointById(endpointId, userId);
+  if (!endpoint) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "Endpoint not found" });
+  }
+
+  const [subscription] = await db
+    .insert(endpointSubscriptions)
+    .values({
+      userId,
+      endpointId,
+      eventType,
+    })
+    .onConflictDoNothing({ target: [endpointSubscriptions.endpointId, endpointSubscriptions.eventType] })
+    .returning();
+
+  return subscription ?? null;
+}
+
+export async function getSubscriptionsByEndpointId(endpointId: string, userId: string) {
+  return db
+    .select()
+    .from(endpointSubscriptions)
+    .where(
+      and(
+        eq(endpointSubscriptions.endpointId, endpointId),
+        eq(endpointSubscriptions.userId, userId),
+      ),
+    )
+    .orderBy(desc(endpointSubscriptions.createdAt));
+}
+
+export async function getSubscriptionsByUserId(userId: string) {
+  return db
+    .select()
+    .from(endpointSubscriptions)
+    .where(eq(endpointSubscriptions.userId, userId))
+    .orderBy(desc(endpointSubscriptions.createdAt));
+}
+
+export async function deleteSubscription(id: string, userId: string) {
+  const [deleted] = await db
+    .delete(endpointSubscriptions)
+    .where(
+      and(
+        eq(endpointSubscriptions.id, id),
+        eq(endpointSubscriptions.userId, userId),
+      ),
+    )
+    .returning();
+  return deleted ?? null;
+}
+
+export async function getSubscribedEndpointsForEventType(
+  userId: string,
+  eventType: string,
+): Promise<{ id: string; url: string; name: string; signingSecret: string; status: string; isActive: boolean; customHeaders: Record<string, string> | null; userId: string }[]> {
+  const subs = await db
+    .selectDistinct({ endpointId: endpointSubscriptions.endpointId })
+    .from(endpointSubscriptions)
+    .where(
+      and(
+        eq(endpointSubscriptions.userId, userId),
+        eq(endpointSubscriptions.isActive, true),
+        sql`(${endpointSubscriptions.eventType} = ${eventType} OR ${eventType} LIKE replace(${endpointSubscriptions.eventType}, '*', '%'))`,
+      ),
+    );
+
+  if (subs.length === 0) return [];
+
+  const ids = subs.map((s) => s.endpointId);
+  return getActiveEndpointsByIds(ids, userId);
+}
+
+export async function resolveSubscribedEndpoints(
+  userId: string,
+  eventType: string,
+): Promise<{ id: string; url: string; name: string; signingSecret: string; status: string; isActive: boolean; customHeaders: Record<string, string> | null; userId: string }[]> {
+  const allSubs = await db
+    .select({
+      eventType: endpointSubscriptions.eventType,
+      endpointId: endpointSubscriptions.endpointId,
+    })
+    .from(endpointSubscriptions)
+    .where(
+      and(
+        eq(endpointSubscriptions.userId, userId),
+        eq(endpointSubscriptions.isActive, true),
+      ),
+    );
+
+  const matchingEndpointIds = new Set<string>();
+  for (const sub of allSubs) {
+    if (sub.eventType === eventType) {
+      matchingEndpointIds.add(sub.endpointId);
+      continue;
+    }
+    const pattern = sub.eventType.replace(/\*/g, "%");
+    const regex = new RegExp("^" + pattern.replace(/%/g, ".*") + "$");
+    if (regex.test(eventType)) {
+      matchingEndpointIds.add(sub.endpointId);
+    }
+  }
+
+  if (matchingEndpointIds.size === 0) return [];
+
+  return getActiveEndpointsByIds([...matchingEndpointIds], userId);
 }

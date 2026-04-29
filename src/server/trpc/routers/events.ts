@@ -9,6 +9,7 @@ import {
   getEventsByUserId,
   createReplayEvent,
   resolveFanoutEndpoints,
+  resolveSubscribedEndpoints,
 } from "@/server/db/queries";
 import { enqueueDelivery } from "@/server/queue/producer";
 
@@ -143,6 +144,65 @@ export const eventRouter = router({
         createdAt: event.createdAt,
         fanoutEndpoints: fanoutEndpoints.length,
         deliveryJobs: jobs.length,
+      };
+    }),
+
+  ingestSubscription: protectedProcedure
+    .input(z.object({
+      eventType: z.string().min(1).max(255),
+      payload: z.record(z.unknown()),
+      idempotencyKey: z.string().max(255).optional(),
+      metadata: z.record(z.unknown()).optional(),
+      source: z.string().max(255).optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const subscribedEndpoints = await resolveSubscribedEndpoints(
+        ctx.userId,
+        input.eventType,
+      );
+
+      if (subscribedEndpoints.length === 0) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "No subscribed endpoints found for this event type",
+        });
+      }
+
+      const event = await createEvent({
+        userId: ctx.userId,
+        endpointId: undefined,
+        payload: input.payload,
+        eventType: input.eventType,
+        idempotencyKey: input.idempotencyKey,
+        metadata: { ...input.metadata, _subscriptionFanout: true },
+        source: input.source,
+      });
+
+      if (!event) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create event",
+        });
+      }
+
+      const jobs = await Promise.all(
+        subscribedEndpoints.map((endpoint) =>
+          enqueueDelivery({
+            eventId: event.id,
+            endpointId: endpoint.id,
+            attemptNumber: 1,
+          }),
+        ),
+      );
+
+      return {
+        id: event.id,
+        status: event.status,
+        eventType: event.eventType,
+        createdAt: event.createdAt,
+        fanoutEndpoints: subscribedEndpoints.length,
+        deliveryJobs: jobs.length,
+        subscriptionFanout: true,
       };
     }),
 

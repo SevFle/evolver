@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { authenticateApiKey } from "@/server/auth/middleware";
-import { createEvent, getEndpointById, resolveFanoutEndpoints } from "@/server/db/queries";
+import { createEvent, getEndpointById, resolveFanoutEndpoints, resolveSubscribedEndpoints } from "@/server/db/queries";
 import { enqueueDelivery } from "@/server/queue/producer";
 import { MAX_PAYLOAD_SIZE_BYTES } from "@/lib/constants";
 
@@ -27,6 +27,15 @@ const sendFanoutEventSchema = z.object({
   "Must provide endpointGroupId or endpointIds",
 );
 
+const sendSubscriptionEventSchema = z.object({
+  payload: z.record(z.unknown()),
+  eventType: z.string().min(1).max(255),
+  idempotencyKey: z.string().max(255).optional(),
+  metadata: z.record(z.unknown()).optional(),
+  source: z.string().max(255).optional(),
+  subscribe: z.literal(true),
+});
+
 export async function POST(req: NextRequest) {
   const auth = await authenticateApiKey(req);
   if (!auth) {
@@ -42,6 +51,10 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
+
+  if (body.subscribe === true) {
+    return handleSubscriptionEvent(body, auth.userId);
+  }
 
   if (body.endpointGroupId || body.endpointIds) {
     return handleFanoutEvent(body, auth.userId);
@@ -102,6 +115,68 @@ async function handleSingleEvent(body: unknown, userId: string) {
       status: event.status,
       eventType: event.eventType,
       createdAt: event.createdAt,
+    },
+    { status: 202 },
+  );
+}
+
+async function handleSubscriptionEvent(body: unknown, userId: string) {
+  const parsed = sendSubscriptionEventSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", details: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+
+  const subscribedEndpoints = await resolveSubscribedEndpoints(
+    userId,
+    parsed.data.eventType,
+  );
+
+  if (subscribedEndpoints.length === 0) {
+    return NextResponse.json(
+      { error: "No subscribed endpoints found for this event type" },
+      { status: 404 },
+    );
+  }
+
+  const event = await createEvent({
+    userId,
+    endpointId: undefined,
+    payload: parsed.data.payload,
+    eventType: parsed.data.eventType,
+    idempotencyKey: parsed.data.idempotencyKey,
+    metadata: { ...parsed.data.metadata, _subscriptionFanout: true },
+    source: parsed.data.source,
+  });
+
+  if (!event) {
+    return NextResponse.json(
+      { error: "Failed to create event" },
+      { status: 500 },
+    );
+  }
+
+  const jobs = await Promise.all(
+    subscribedEndpoints.map((endpoint) =>
+      enqueueDelivery({
+        eventId: event.id,
+        endpointId: endpoint.id,
+        attemptNumber: 1,
+      }),
+    ),
+  );
+
+  return NextResponse.json(
+    {
+      id: event.id,
+      status: event.status,
+      eventType: event.eventType,
+      createdAt: event.createdAt,
+      fanoutEndpoints: subscribedEndpoints.length,
+      deliveryJobs: jobs.length,
+      subscriptionFanout: true,
     },
     { status: 202 },
   );
