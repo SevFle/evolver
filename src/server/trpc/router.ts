@@ -2,6 +2,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "./init";
 import { endpointRouter } from "./routers/endpoints";
 import { eventRouter } from "./routers/events";
+import { analyticsRouter } from "./routers/analytics";
 import {
   getDeliveriesByEventId,
   getRecentDeliveriesByEndpoint,
@@ -36,6 +37,7 @@ export const appRouter = router({
   events: eventRouter,
   deliveries: deliveryRouter,
   apiKeys: apiKeyRouter,
+  analytics: analyticsRouter,
 });
 
 export type AppRouter = typeof appRouter;
