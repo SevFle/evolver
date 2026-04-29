@@ -3,11 +3,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("@/server/db", () => ({
   db: {
     select: () => ({
-      from: () => ({
-        where: vi.fn(() => ({
-          orderBy: vi.fn(() => []),
-        })),
-      }),
+      from: () => {
+        const result: { orderBy: ReturnType<typeof vi.fn> } & unknown[] = Object.assign([], { orderBy: vi.fn(() => result) });
+        const where = vi.fn(() => result);
+        return { where };
+      },
     }),
     update: () => ({
       set: vi.fn(() => ({
@@ -113,12 +113,12 @@ describe("soft-delete — query functions resolve without error", () => {
   it("getEndpointsByUserId resolves", async () => {
     const { getEndpointsByUserId } = await import("@/server/db/queries");
     const result = await getEndpointsByUserId("user-1");
-    expect(result).toEqual([]);
+    expect(result).toHaveLength(0);
   });
 
   it("getEndpointById resolves", async () => {
     const { getEndpointById } = await import("@/server/db/queries");
     const result = await getEndpointById("ep-1");
-    expect(result).toBeUndefined();
+    expect(result).toBeNull();
   });
 });
