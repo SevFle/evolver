@@ -39,6 +39,14 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
     references: [endpoints.id],
   }),
   deliveries: many(deliveries),
+  replayedFrom: one(events, {
+    fields: [events.replayedFromEventId],
+    references: [events.id],
+    relationName: "eventReplayLineage",
+  }),
+  replays: many(events, {
+    relationName: "eventReplayLineage",
+  }),
 }));
 
 export const deliveriesRelations = relations(deliveries, ({ one }) => ({

@@ -18,6 +18,10 @@ describe("schema field completeness", () => {
     expect(events.status).toBeDefined();
   });
 
+  it("events table has replayedFromEventId column", () => {
+    expect(events.replayedFromEventId).toBeDefined();
+  });
+
   it("endpoints table has signingSecret column", () => {
     expect(endpoints.signingSecret).toBeDefined();
   });
@@ -77,5 +81,21 @@ describe("drizzle config", () => {
     );
     expect(configText).toContain("DATABASE_URL_NON_POOLING");
     expect(configText).not.toContain("process.env.DATABASE_URL!");
+  });
+});
+
+describe("migration SQL completeness", () => {
+  it("includes replayed_from_event_id column in events table", async () => {
+    const sql = await import("fs").then((fs) =>
+      fs.promises.readFile("drizzle/0000_steep_silver_centurion.sql", "utf-8"),
+    );
+    expect(sql).toContain('"replayed_from_event_id" uuid');
+  });
+
+  it("includes events_replayed_from_idx index", async () => {
+    const sql = await import("fs").then((fs) =>
+      fs.promises.readFile("drizzle/0000_steep_silver_centurion.sql", "utf-8"),
+    );
+    expect(sql).toContain('"events_replayed_from_idx"');
   });
 });

@@ -1,17 +1,27 @@
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, isNull } from "drizzle-orm";
 import { db } from "@/server/db";
 import { users, endpoints, events, deliveries, apiKeys } from "@/server/db/schema";
 import type { CreateEndpointRequest, SendEventRequest } from "@/types";
 import type { DeliveryStatus } from "@/server/db/schema/enums";
 import { generateSigningSecret } from "@/server/services/signing";
 import { generateApiKey, hashApiKey } from "@/server/auth/api-keys";
+import { TRPCError } from "@trpc/server";
 
 export async function createEndpoint(
   userId: string,
   data: CreateEndpointRequest,
 ) {
   const secret = generateSigningSecret();
-  const name = data.name ?? new URL(data.url).hostname;
+  let hostname: string;
+  try {
+    hostname = new URL(data.url).hostname;
+  } catch {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `Invalid URL: ${data.url}`,
+    });
+  }
+  const name = data.name ?? hostname;
   const [endpoint] = await db
     .insert(endpoints)
     .values({
@@ -30,14 +40,14 @@ export async function getEndpointsByUserId(userId: string) {
   return db
     .select()
     .from(endpoints)
-    .where(eq(endpoints.userId, userId))
+    .where(and(eq(endpoints.userId, userId), isNull(endpoints.deletedAt)))
     .orderBy(desc(endpoints.createdAt));
 }
 
 export async function getEndpointById(id: string, userId?: string) {
   const conditions = userId
-    ? and(eq(endpoints.id, id), eq(endpoints.userId, userId))
-    : eq(endpoints.id, id);
+    ? and(eq(endpoints.id, id), eq(endpoints.userId, userId), isNull(endpoints.deletedAt))
+    : and(eq(endpoints.id, id), isNull(endpoints.deletedAt));
   const [endpoint] = await db
     .select()
     .from(endpoints)
@@ -50,9 +60,19 @@ export async function updateEndpoint(
   data: Partial<Pick<typeof endpoints.$inferInsert, "url" | "description" | "customHeaders" | "status">>,
   userId?: string,
 ) {
+  if (data.url) {
+    try {
+      new URL(data.url);
+    } catch {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `Invalid URL: ${data.url}`,
+      });
+    }
+  }
   const conditions = userId
-    ? and(eq(endpoints.id, id), eq(endpoints.userId, userId))
-    : eq(endpoints.id, id);
+    ? and(eq(endpoints.id, id), eq(endpoints.userId, userId), isNull(endpoints.deletedAt))
+    : and(eq(endpoints.id, id), isNull(endpoints.deletedAt));
   const [endpoint] = await db
     .update(endpoints)
     .set({ ...data, updatedAt: new Date() })
@@ -63,9 +83,12 @@ export async function updateEndpoint(
 
 export async function deleteEndpoint(id: string, userId?: string) {
   const conditions = userId
-    ? and(eq(endpoints.id, id), eq(endpoints.userId, userId))
-    : eq(endpoints.id, id);
-  await db.delete(endpoints).where(conditions);
+    ? and(eq(endpoints.id, id), eq(endpoints.userId, userId), isNull(endpoints.deletedAt))
+    : and(eq(endpoints.id, id), isNull(endpoints.deletedAt));
+  await db
+    .update(endpoints)
+    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .where(conditions);
 }
 
 export async function createEvent(data: SendEventRequest) {
@@ -101,6 +124,50 @@ export async function getEventsByEndpointId(endpointId: string, userId?: string,
     .from(events)
     .where(conditions)
     .orderBy(desc(events.createdAt))
+    .limit(limit);
+}
+
+export async function getEventsByUserId(userId: string, limit = 50) {
+  return db
+    .select()
+    .from(events)
+    .where(eq(events.userId, userId))
+    .orderBy(desc(events.createdAt))
+    .limit(limit);
+}
+
+export async function createReplayEvent(data: {
+  userId: string;
+  endpointId: string;
+  payload: Record<string, unknown>;
+  eventType: string;
+  metadata?: Record<string, unknown>;
+  source?: string | null;
+  idempotencyKey: string;
+  replayedFromEventId: string;
+}) {
+  const [event] = await db
+    .insert(events)
+    .values({
+      userId: data.userId,
+      endpointId: data.endpointId,
+      payload: data.payload,
+      eventType: data.eventType,
+      metadata: data.metadata ?? {},
+      source: data.source ?? null,
+      idempotencyKey: data.idempotencyKey,
+      replayedFromEventId: data.replayedFromEventId,
+    })
+    .returning();
+  return event;
+}
+
+export async function getDeliveriesByUserId(userId: string, limit = 50) {
+  return db
+    .select()
+    .from(deliveries)
+    .where(eq(deliveries.userId, userId))
+    .orderBy(desc(deliveries.createdAt))
     .limit(limit);
 }
 

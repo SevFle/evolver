@@ -5,6 +5,7 @@ import { eventRouter } from "./routers/events";
 import {
   getDeliveriesByEventId,
   getRecentDeliveriesByEndpoint,
+  getDeliveriesByUserId,
   getApiKeysByUserId,
 } from "@/server/db/queries";
 
@@ -20,7 +21,7 @@ const deliveryRouter = router({
       if (input?.endpointId) {
         return getRecentDeliveriesByEndpoint(input.endpointId, ctx.userId);
       }
-      return [];
+      return getDeliveriesByUserId(ctx.userId);
     }),
 });
 

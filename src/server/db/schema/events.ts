@@ -32,6 +32,7 @@ export const events = pgTable(
     source: text("source"),
     idempotencyKey: text("idempotency_key"),
     status: eventStatusEnum("status").default("queued").notNull(),
+    replayedFromEventId: uuid("replayed_from_event_id"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -49,5 +50,6 @@ export const events = pgTable(
       .on(table.idempotencyKey)
       .where(sql`${table.idempotencyKey} is not null`),
     endpointIdIdx: index("events_endpoint_id_idx").on(table.endpointId),
+    replayedFromIdx: index("events_replayed_from_idx").on(table.replayedFromEventId),
   }),
 );

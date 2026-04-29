@@ -188,6 +188,18 @@ describe("endpoint router — update", () => {
     );
     expect(result.url).toBe("https://new.example.com");
   });
+
+  it("rejects invalid URL on update", async () => {
+    mockedGet.mockResolvedValue(sampleEndpoint as never);
+    const caller = createCaller({ userId: "user-a" });
+    await expect(
+      caller.update({
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        url: "not-a-url",
+      }),
+    ).rejects.toThrow();
+    expect(mockedUpdate).not.toHaveBeenCalled();
+  });
 });
 
 describe("endpoint router — delete", () => {

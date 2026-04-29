@@ -650,6 +650,12 @@
           "notNull": true,
           "default": "'queued'"
         },
+        "replayed_from_event_id": {
+          "name": "replayed_from_event_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -659,6 +665,21 @@
         }
       },
       "indexes": {
+        "events_replayed_from_idx": {
+          "name": "events_replayed_from_idx",
+          "columns": [
+            {
+              "expression": "replayed_from_event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "events_user_created_at_idx": {
           "name": "events_user_created_at_idx",
           "columns": [

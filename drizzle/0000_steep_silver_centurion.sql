@@ -66,6 +66,7 @@ CREATE TABLE "events" (
 	"source" text,
 	"idempotency_key" text,
 	"status" "event_status" DEFAULT 'queued' NOT NULL,
+	"replayed_from_event_id" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -109,4 +110,5 @@ CREATE INDEX "endpoints_user_id_idx" ON "endpoints" USING btree ("user_id");--> 
 CREATE INDEX "events_user_created_at_idx" ON "events" USING btree ("user_id","created_at");--> statement-breakpoint
 CREATE INDEX "events_user_event_type_idx" ON "events" USING btree ("user_id","event_type");--> statement-breakpoint
 CREATE UNIQUE INDEX "events_idempotency_key_idx" ON "events" USING btree ("idempotency_key") WHERE "events"."idempotency_key" is not null;--> statement-breakpoint
-CREATE INDEX "events_endpoint_id_idx" ON "events" USING btree ("endpoint_id");
+CREATE INDEX "events_endpoint_id_idx" ON "events" USING btree ("endpoint_id");--> statement-breakpoint
+CREATE INDEX "events_replayed_from_idx" ON "events" USING btree ("replayed_from_event_id");

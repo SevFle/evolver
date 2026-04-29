@@ -83,6 +83,7 @@ const mockEvent = {
   source: null,
   idempotencyKey: null,
   status: "queued" as const,
+  replayedFromEventId: null,
   createdAt: new Date(),
 };
 

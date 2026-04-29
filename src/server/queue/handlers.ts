@@ -81,12 +81,10 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
         });
       }
     } else {
-      const failureMessage = `HTTP ${result.statusCode}`;
       await handleFailedDelivery(
         event.id,
         endpoint,
         data.attemptNumber,
-        failureMessage,
       );
     }
   } catch (error) {
@@ -113,7 +111,6 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
       event.id,
       endpoint,
       data.attemptNumber,
-      errorMessage,
     );
   }
 }
@@ -122,7 +119,6 @@ async function handleFailedDelivery(
   eventId: string,
   endpoint: { id: string; userId: string; url: string; name: string },
   attemptNumber: number,
-  lastErrorMessage?: string | null,
 ): Promise<void> {
   const nextAttempt = attemptNumber + 1;
 
@@ -163,7 +159,7 @@ async function handleFailedDelivery(
           return;
         }
 
-        const error = lastErrorMessage ?? await getLastErrorForEndpoint(endpoint.id);
+        const error = await getLastErrorForEndpoint(endpoint.id);
         const dashboardBase = process.env.DASHBOARD_URL ?? "http://localhost:3000";
 
         const result = await sendFailureAlert({

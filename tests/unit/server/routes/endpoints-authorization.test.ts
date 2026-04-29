@@ -156,4 +156,16 @@ describe("DELETE /api/v1/endpoints/[id] authorization", () => {
     expect(res.status).toBe(204);
     expect(mockedDeleteEndpoint).toHaveBeenCalledWith("ep-1", "user-a");
   });
+
+  it("PATCH rejects invalid URL with 400", async () => {
+    mockedAuth.mockResolvedValue({ userId: "user-a", apiKeyId: "key-1" });
+    mockedGetEndpoint.mockResolvedValue(endpointOwner as never);
+
+    const { PATCH } = await import("@/app/api/v1/endpoints/[id]/route");
+    const res = await PATCH(makeReq({ url: "not-a-url" }), {
+      params: Promise.resolve({ id: "ep-1" }),
+    });
+    expect(res.status).toBe(400);
+    expect(mockedUpdateEndpoint).not.toHaveBeenCalled();
+  });
 });
