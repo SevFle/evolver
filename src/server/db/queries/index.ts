@@ -13,6 +13,7 @@ import type { CreateEndpointRequest, SendEventRequest } from "@/types";
 import type { DeliveryStatus } from "@/server/db/schema/enums";
 import { generateSigningSecret } from "@/server/services/signing";
 import { generateApiKey, hashApiKey } from "@/server/auth/api-keys";
+import { validateEndpointUrl, SsrfValidationError } from "@/server/services/ssrf";
 import { TRPCError } from "@trpc/server";
 
 export async function createEndpoint(
@@ -22,8 +23,15 @@ export async function createEndpoint(
   const secret = generateSigningSecret();
   let hostname: string;
   try {
+    validateEndpointUrl(data.url);
     hostname = new URL(data.url).hostname;
-  } catch {
+  } catch (err) {
+    if (err instanceof SsrfValidationError) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: err.message,
+      });
+    }
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: `Invalid URL: ${data.url}`,
@@ -89,8 +97,14 @@ export async function updateEndpoint(
 ) {
   if (data.url) {
     try {
-      new URL(data.url);
-    } catch {
+      validateEndpointUrl(data.url);
+    } catch (err) {
+      if (err instanceof SsrfValidationError) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: err.message,
+        });
+      }
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: `Invalid URL: ${data.url}`,
@@ -636,8 +650,14 @@ export async function updateEndpointConfig(
 ) {
   if (data.url) {
     try {
-      new URL(data.url);
-    } catch {
+      validateEndpointUrl(data.url);
+    } catch (err) {
+      if (err instanceof SsrfValidationError) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: err.message,
+        });
+      }
       throw new TRPCError({
         code: "BAD_REQUEST",
         message: `Invalid URL: ${data.url}`,

@@ -12,7 +12,6 @@ interface EndpointWithStats {
   url: string;
   name: string;
   description: string | null;
-  signingSecret: string;
   status: string;
   customHeaders: Record<string, string> | null;
   isActive: boolean;

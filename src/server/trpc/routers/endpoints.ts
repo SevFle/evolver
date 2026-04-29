@@ -43,6 +43,11 @@ const updateEndpointConfigSchema = z.object({
   rateLimit: z.number().int().min(1).nullable().optional(),
 });
 
+function stripSecret<T extends Record<string, unknown>>(endpoint: T): Omit<T, "signingSecret"> {
+  const { signingSecret: _, ...rest } = endpoint;
+  return rest;
+}
+
 export const endpointRouter = router({
   create: protectedProcedure
     .input(createEndpointSchema)
@@ -58,11 +63,13 @@ export const endpointRouter = router({
     }),
 
   list: protectedProcedure.query(async ({ ctx }) => {
-    return getEndpointsByUserId(ctx.userId);
+    const endpoints = await getEndpointsByUserId(ctx.userId);
+    return endpoints.map(stripSecret);
   }),
 
   listWithStats: protectedProcedure.query(async ({ ctx }) => {
-    return getEndpointsWithStats(ctx.userId);
+    const endpoints = await getEndpointsWithStats(ctx.userId);
+    return endpoints.map((ep) => stripSecret(ep));
   }),
 
   get: protectedProcedure
@@ -70,7 +77,7 @@ export const endpointRouter = router({
     .query(async ({ input, ctx }) => {
       const endpoint = await getEndpointById(input.id, ctx.userId);
       if (!endpoint) return null;
-      return endpoint;
+      return stripSecret(endpoint);
     }),
 
   getWithStats: protectedProcedure
@@ -79,7 +86,7 @@ export const endpointRouter = router({
       const endpoint = await getEndpointById(input.id, ctx.userId);
       if (!endpoint) return null;
       const stats = await getEndpointDeliveryStats(input.id, ctx.userId);
-      return { ...endpoint, stats };
+      return { ...stripSecret(endpoint), stats };
     }),
 
   getDeliveries: protectedProcedure
@@ -109,7 +116,7 @@ export const endpointRouter = router({
           message: "Endpoint not found",
         });
       }
-      return updated;
+      return stripSecret(updated);
     }),
 
   updateConfig: protectedProcedure
@@ -130,7 +137,7 @@ export const endpointRouter = router({
           message: "Endpoint not found",
         });
       }
-      return updated;
+      return stripSecret(updated);
     }),
 
   delete: protectedProcedure
@@ -145,6 +152,22 @@ export const endpointRouter = router({
       }
       await deleteEndpoint(input.id, ctx.userId);
       return { success: true };
+    }),
+
+  revealSecret: protectedProcedure
+    .input(z.object({
+      id: z.string().uuid(),
+      confirm: z.literal(true),
+    }))
+    .query(async ({ input, ctx }) => {
+      const endpoint = await getEndpointById(input.id, ctx.userId);
+      if (!endpoint) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Endpoint not found",
+        });
+      }
+      return { signingSecret: endpoint.signingSecret };
     }),
 
   rotateSecret: protectedProcedure

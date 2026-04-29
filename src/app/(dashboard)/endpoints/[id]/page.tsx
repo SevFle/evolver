@@ -20,7 +20,6 @@ interface EndpointDetail {
   url: string;
   name: string;
   description: string | null;
-  signingSecret: string;
   status: string;
   customHeaders: Record<string, string> | null;
   isActive: boolean;
@@ -63,6 +62,8 @@ export default function EndpointDetailPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showSecret, setShowSecret] = useState(false);
+  const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
+  const [revealing, setRevealing] = useState(false);
   const [rotating, setRotating] = useState(false);
   const [newSecret, setNewSecret] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -87,6 +88,20 @@ export default function EndpointDetailPage({
     loadData();
   }, [loadData]);
 
+  async function handleRevealSecret() {
+    setRevealing(true);
+    setError(null);
+    try {
+      const result = await trpc.endpoints.revealSecret.query({ id, confirm: true });
+      setRevealedSecret(result.signingSecret);
+      setShowSecret(true);
+    } catch {
+      setError("Failed to reveal secret");
+    } finally {
+      setRevealing(false);
+    }
+  }
+
   async function handleRotateSecret() {
     if (!confirm("Are you sure? Rotating the secret will invalidate the current signing key.")) return;
     setRotating(true);
@@ -94,6 +109,7 @@ export default function EndpointDetailPage({
     try {
       const result = await trpc.endpoints.rotateSecret.mutate({ id });
       setNewSecret(result.signingSecret);
+      setRevealedSecret(null);
       setShowSecret(true);
     } catch {
       setError("Failed to rotate secret");
@@ -132,7 +148,7 @@ export default function EndpointDetailPage({
     );
   }
 
-  const secret = newSecret ?? endpoint.signingSecret;
+  const secret = newSecret ?? revealedSecret;
 
   return (
     <div>
@@ -307,18 +323,34 @@ export default function EndpointDetailPage({
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 rounded-md bg-muted p-3 text-xs font-mono break-all">
-                {showSecret ? secret : `${secret.slice(0, 12)}${"•".repeat(24)}`}
-              </code>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowSecret(!showSecret)}
-              >
-                {showSecret ? "Hide" : "Show"}
-              </Button>
-            </div>
+            {showSecret && secret ? (
+              <div className="flex items-center gap-2">
+                <code className="flex-1 rounded-md bg-muted p-3 text-xs font-mono break-all">
+                  {secret}
+                </code>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSecret(false)}
+                >
+                  Hide
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <code className="flex-1 rounded-md bg-muted p-3 text-xs font-mono">
+                  {"•".repeat(36)}
+                </code>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRevealSecret}
+                  disabled={revealing}
+                >
+                  {revealing ? "Loading..." : "Reveal"}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
