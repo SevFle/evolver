@@ -118,7 +118,7 @@ export async function deleteEndpoint(id: string, userId?: string) {
     .where(conditions);
 }
 
-export async function createEvent(data: SendEventRequest & { endpointGroupId?: string | null }) {
+export async function createEvent(data: SendEventRequest) {
   const endpointId = data.endpointId ?? null;
   const endpointGroupId = data.endpointGroupId ?? null;
   if (!endpointId && !endpointGroupId) {

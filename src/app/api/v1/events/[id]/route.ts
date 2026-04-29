@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateApiKey } from "@/server/auth/middleware";
-import { getEventById, getDeliveriesByEventId, getEventsByEndpointId } from "@/server/db/queries";
+import { getEventById, getDeliveriesByEventId, getEndpointGroupById } from "@/server/db/queries";
 
 export async function GET(
   req: NextRequest,
@@ -20,15 +20,29 @@ export async function GET(
 
   const deliveryAttempts = await getDeliveriesByEventId(id, auth.userId);
 
+  let endpointGroup = null;
+  if (event.endpointGroupId) {
+    const group = await getEndpointGroupById(event.endpointGroupId, auth.userId);
+    if (group) {
+      endpointGroup = {
+        id: group.id,
+        name: group.name,
+      };
+    }
+  }
+
   return NextResponse.json({
     id: event.id,
     endpointId: event.endpointId,
+    endpointGroupId: event.endpointGroupId,
+    endpointGroup,
     payload: event.payload,
     eventType: event.eventType,
     status: event.status,
     createdAt: event.createdAt,
     deliveries: deliveryAttempts.map((d) => ({
       id: d.id,
+      endpointId: d.endpointId,
       attemptNumber: d.attemptNumber,
       statusCode: d.responseStatusCode,
       status: d.status,

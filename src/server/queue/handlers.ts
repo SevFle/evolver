@@ -10,6 +10,7 @@ import {
   getSuccessfulDelivery,
   getUserById,
   getLastErrorForEndpoint,
+  updateFanoutEventStatus,
 } from "@/server/db/queries";
 import { deliverWebhook, isSuccessfulDelivery } from "@/server/services/delivery";
 import { getNextRetryAt, hasRetriesRemaining } from "@/server/services/retry";
@@ -40,9 +41,15 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
     return;
   }
 
+  const isFanout = !!event.endpointGroupId;
+
   const endpoint = await getEndpointById(data.endpointId);
   if (!endpoint || endpoint.status === "disabled" || !endpoint.isActive) {
-    await updateEventStatus(event.id, "failed");
+    if (isFanout) {
+      await updateFanoutEventStatus(event.id);
+    } else {
+      await updateEventStatus(event.id, "failed");
+    }
     return;
   }
 
@@ -77,7 +84,11 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
     });
 
     if (success) {
-      await updateEventStatus(event.id, "delivered");
+      if (isFanout) {
+        await updateFanoutEventStatus(event.id);
+      } else {
+        await updateEventStatus(event.id, "delivered");
+      }
       if (endpoint.status === "degraded") {
         await updateEndpoint(endpoint.id, {
           status: getEndpointStatusAfterSuccess(),
@@ -88,6 +99,7 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
         event.id,
         endpoint,
         data.attemptNumber,
+        isFanout,
       );
     }
   } catch (error) {
@@ -117,6 +129,7 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
       event.id,
       endpoint,
       data.attemptNumber,
+      isFanout,
     );
   }
 }
@@ -125,6 +138,7 @@ async function handleFailedDelivery(
   eventId: string,
   endpoint: { id: string; userId: string; url: string; name: string },
   attemptNumber: number,
+  isFanout: boolean,
 ): Promise<void> {
   const nextAttempt = attemptNumber + 1;
 
@@ -141,7 +155,11 @@ async function handleFailedDelivery(
       { eventId, endpointId: endpoint.id, attemptNumber },
       `Max retries (${attemptNumber}) exhausted`,
     );
-    await updateEventStatus(eventId, "failed");
+    if (isFanout) {
+      await updateFanoutEventStatus(eventId);
+    } else {
+      await updateEventStatus(eventId, "failed");
+    }
   }
 
   const consecutiveFailures = await getConsecutiveFailures(endpoint.id);

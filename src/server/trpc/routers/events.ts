@@ -8,6 +8,7 @@ import {
   getEventsByEndpointId,
   getEventsByUserId,
   createReplayEvent,
+  resolveFanoutEndpoints,
 } from "@/server/db/queries";
 import { enqueueDelivery } from "@/server/queue/producer";
 
@@ -19,6 +20,27 @@ const ingestEventSchema = z.object({
   source: z.string().max(255).optional(),
   idempotencyKey: z.string().max(255).optional(),
 });
+
+const ingestFanoutSchema = z.discriminatedUnion("target", [
+  z.object({
+    target: z.literal("group"),
+    endpointGroupId: z.string().uuid(),
+    eventType: z.string().min(1).max(255),
+    payload: z.record(z.unknown()),
+    metadata: z.record(z.unknown()).optional(),
+    source: z.string().max(255).optional(),
+    idempotencyKey: z.string().max(255).optional(),
+  }),
+  z.object({
+    target: z.literal("endpoints"),
+    endpointIds: z.array(z.string().uuid()).min(1).max(50),
+    eventType: z.string().min(1).max(255),
+    payload: z.record(z.unknown()),
+    metadata: z.record(z.unknown()).optional(),
+    source: z.string().max(255).optional(),
+    idempotencyKey: z.string().max(255).optional(),
+  }),
+]);
 
 export const eventRouter = router({
   ingest: protectedProcedure
@@ -67,6 +89,60 @@ export const eventRouter = router({
         status: event.status,
         eventType: event.eventType,
         createdAt: event.createdAt,
+      };
+    }),
+
+  ingestFanout: protectedProcedure
+    .input(ingestFanoutSchema)
+    .mutation(async ({ input, ctx }) => {
+      const resolveOpts =
+        input.target === "group"
+          ? { endpointGroupId: input.endpointGroupId }
+          : { endpointIds: input.endpointIds };
+
+      const fanoutEndpoints = await resolveFanoutEndpoints(
+        ctx.userId,
+        resolveOpts,
+      );
+
+      const endpointGroupId =
+        input.target === "group" ? input.endpointGroupId : null;
+
+      const event = await createEvent({
+        userId: ctx.userId,
+        endpointId: undefined,
+        endpointGroupId: endpointGroupId ?? undefined,
+        payload: input.payload,
+        eventType: input.eventType,
+        idempotencyKey: input.idempotencyKey,
+        metadata: input.metadata,
+        source: input.source,
+      });
+
+      if (!event) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create event",
+        });
+      }
+
+      const jobs = await Promise.all(
+        fanoutEndpoints.map((endpoint) =>
+          enqueueDelivery({
+            eventId: event.id,
+            endpointId: endpoint.id,
+            attemptNumber: 1,
+          }),
+        ),
+      );
+
+      return {
+        id: event.id,
+        status: event.status,
+        eventType: event.eventType,
+        createdAt: event.createdAt,
+        fanoutEndpoints: fanoutEndpoints.length,
+        deliveryJobs: jobs.length,
       };
     }),
 

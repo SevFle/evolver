@@ -63,7 +63,19 @@ export interface CreateEndpointRequest {
 
 export interface SendEventRequest {
   userId: string;
-  endpointId: string;
+  endpointId?: string | null;
+  endpointGroupId?: string | null;
+  payload: Record<string, unknown>;
+  eventType: string;
+  idempotencyKey?: string;
+  metadata?: Record<string, unknown>;
+  source?: string;
+}
+
+export interface SendFanoutEventRequest {
+  userId: string;
+  endpointGroupId?: string;
+  endpointIds?: string[];
   payload: Record<string, unknown>;
   eventType: string;
   idempotencyKey?: string;
