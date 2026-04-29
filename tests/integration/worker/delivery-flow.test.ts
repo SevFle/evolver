@@ -77,6 +77,7 @@ const mockEvent = {
   id: "evt-001",
   userId: "user-001",
   endpointId: "ep-001",
+  endpointGroupId: null,
   eventType: "test.event",
   payload: { hello: "world" },
   metadata: {},

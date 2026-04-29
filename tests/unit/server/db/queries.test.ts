@@ -10,13 +10,15 @@ const mockFrom = vi.fn(() => ({ where: mockWhere }));
 const mockSelect = vi.fn(() => ({ from: mockFrom }));
 const mockUpdateSet = vi.fn(() => ({ where: mockWhere, returning: vi.fn(() => []) }));
 const mockUpdate = vi.fn(() => ({ set: mockUpdateSet }));
-const mockInsert = vi.fn(() => ({ values: vi.fn(() => ({ returning: vi.fn(() => []) })) }));
+const mockInsertReturning = vi.fn<(args: any) => any>(() => []);
+const mockInsertValues = vi.fn(() => ({ returning: mockInsertReturning }));
+const mockInsert = vi.fn(() => ({ values: mockInsertValues }));
 
 vi.mock("@/server/db", () => ({
   db: {
     select: () => ({ from: mockFrom }),
     update: () => ({ set: mockUpdateSet }),
-    insert: () => ({ values: vi.fn(() => ({ returning: vi.fn(() => []) })) }),
+    insert: () => ({ values: mockInsertValues }),
   },
 }));
 
@@ -125,5 +127,83 @@ describe("queries — soft-delete filter uses isNull(deletedAt)", () => {
       isNull(endpoints.deletedAt),
     );
     expect(cond).toBeDefined();
+  });
+});
+
+describe("queries — createReplayEvent nullability validation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("throws BAD_REQUEST when both endpointId and endpointGroupId are null", async () => {
+    const { createReplayEvent } = await import("@/server/db/queries");
+    await expect(
+      createReplayEvent({
+        userId: "user-1",
+        endpointId: null,
+        endpointGroupId: null,
+        payload: { test: true },
+        eventType: "test.event",
+        idempotencyKey: "key-1",
+        replayedFromEventId: "evt-1",
+      }),
+    ).rejects.toThrow("Must provide endpointId or endpointGroupId");
+    try {
+      await createReplayEvent({
+        userId: "user-1",
+        endpointId: null,
+        endpointGroupId: null,
+        payload: { test: true },
+        eventType: "test.event",
+        idempotencyKey: "key-1",
+        replayedFromEventId: "evt-1",
+      });
+    } catch (err) {
+      expect(err).toBeInstanceOf(TRPCError);
+      expect((err as TRPCError).code).toBe("BAD_REQUEST");
+    }
+  });
+
+  it("throws BAD_REQUEST when endpointId and endpointGroupId are undefined", async () => {
+    const { createReplayEvent } = await import("@/server/db/queries");
+    await expect(
+      createReplayEvent({
+        userId: "user-1",
+        endpointId: null,
+        payload: { test: true },
+        eventType: "test.event",
+        idempotencyKey: "key-2",
+        replayedFromEventId: "evt-1",
+      }),
+    ).rejects.toThrow("Must provide endpointId or endpointGroupId");
+  });
+
+  it("succeeds when endpointId is provided", async () => {
+    mockInsertReturning.mockReturnValueOnce([{ id: "new-evt" }]);
+    const { createReplayEvent } = await import("@/server/db/queries");
+    const result = await createReplayEvent({
+      userId: "user-1",
+      endpointId: "ep-1",
+      payload: { test: true },
+      eventType: "test.event",
+      idempotencyKey: "key-3",
+      replayedFromEventId: "evt-1",
+    });
+    expect(result).toEqual({ id: "new-evt" });
+  });
+
+  it("succeeds when endpointGroupId is provided", async () => {
+    mockInsertReturning.mockReturnValueOnce([{ id: "new-evt-2" }]);
+    const { createReplayEvent } = await import("@/server/db/queries");
+    const result = await createReplayEvent({
+      userId: "user-1",
+      endpointId: null,
+      endpointGroupId: "eg-1",
+      payload: { test: true },
+      eventType: "test.event",
+      idempotencyKey: "key-4",
+      replayedFromEventId: "evt-1",
+    });
+    expect(result).toEqual({ id: "new-evt-2" });
   });
 });

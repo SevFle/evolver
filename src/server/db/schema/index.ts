@@ -4,6 +4,7 @@ import { endpoints } from "./endpoints";
 import { events } from "./events";
 import { deliveries } from "./deliveries";
 import { teams } from "./teams";
+import { endpointGroups, endpointGroupMembers } from "./endpoint-groups";
 
 export { users } from "./users";
 export { apiKeys } from "./api-keys";
@@ -11,6 +12,8 @@ export { endpoints } from "./endpoints";
 export { events } from "./events";
 export { deliveries } from "./deliveries";
 export { teams } from "./teams";
+export { endpointGroups } from "./endpoint-groups";
+export { endpointGroupMembers } from "./endpoint-groups";
 export {
   usersRelations,
   apiKeysRelations,
@@ -18,6 +21,8 @@ export {
   eventsRelations,
   deliveriesRelations,
   teamsRelations,
+  endpointGroupsRelations,
+  endpointGroupMembersRelations,
 } from "./relations";
 export {
   deliveryStatusEnum,
@@ -44,4 +49,8 @@ export type Delivery = typeof deliveries.$inferSelect;
 export type NewDelivery = typeof deliveries.$inferInsert;
 export type Team = typeof teams.$inferSelect;
 export type NewTeam = typeof teams.$inferInsert;
+export type EndpointGroup = typeof endpointGroups.$inferSelect;
+export type NewEndpointGroup = typeof endpointGroups.$inferInsert;
+export type EndpointGroupMember = typeof endpointGroupMembers.$inferSelect;
+export type NewEndpointGroupMember = typeof endpointGroupMembers.$inferInsert;
 export type DeliveryInsert = typeof deliveries.$inferInsert;

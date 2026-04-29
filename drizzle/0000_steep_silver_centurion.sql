@@ -16,24 +16,33 @@ CREATE TABLE "api_keys" (
 	"revoked_at" timestamp with time zone
 );
 --> statement-breakpoint
-CREATE TABLE "deliveries" (
+CREATE TABLE "users" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"event_id" uuid NOT NULL,
-	"endpoint_id" uuid NOT NULL,
-	"user_id" uuid NOT NULL,
-	"status" "delivery_status" DEFAULT 'pending' NOT NULL,
-	"attempt_number" integer DEFAULT 1 NOT NULL,
-	"max_attempts" integer DEFAULT 5 NOT NULL,
-	"next_retry_at" timestamp with time zone,
-	"request_headers" jsonb,
-	"response_status_code" integer,
-	"response_headers" jsonb,
-	"response_body" text,
-	"error_message" text,
-	"duration_ms" integer,
+	"email" text NOT NULL,
+	"password_hash" text NOT NULL,
+	"name" text,
+	"email_verified_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"completed_at" timestamp with time zone
+	CONSTRAINT "users_email_unique" UNIQUE("email")
+);
+--> statement-breakpoint
+CREATE TABLE "teams" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"name" text NOT NULL,
+	"slug" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "teams_slug_unique" UNIQUE("slug")
+);
+--> statement-breakpoint
+CREATE TABLE "endpoint_groups" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"user_id" uuid NOT NULL,
+	"name" text NOT NULL,
+	"description" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "endpoints" (
@@ -59,7 +68,8 @@ CREATE TABLE "endpoints" (
 CREATE TABLE "events" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
-	"endpoint_id" uuid NOT NULL,
+	"endpoint_id" uuid,
+	"endpoint_group_id" uuid,
 	"event_type" text NOT NULL,
 	"payload" jsonb NOT NULL,
 	"metadata" jsonb DEFAULT '{}'::jsonb,
@@ -67,48 +77,67 @@ CREATE TABLE "events" (
 	"idempotency_key" text,
 	"status" "event_status" DEFAULT 'queued' NOT NULL,
 	"replayed_from_event_id" uuid,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "events_target_check" CHECK ("endpoint_id" IS NOT NULL OR "endpoint_group_id" IS NOT NULL)
+);
+--> statement-breakpoint
+CREATE TABLE "endpoint_group_members" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"group_id" uuid NOT NULL,
+	"endpoint_id" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "teams" (
+CREATE TABLE "deliveries" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"name" text NOT NULL,
-	"slug" text NOT NULL,
+	"event_id" uuid NOT NULL,
+	"endpoint_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	"status" "delivery_status" DEFAULT 'pending' NOT NULL,
+	"attempt_number" integer DEFAULT 1 NOT NULL,
+	"max_attempts" integer DEFAULT 5 NOT NULL,
+	"next_retry_at" timestamp with time zone,
+	"request_headers" jsonb,
+	"response_status_code" integer,
+	"response_headers" jsonb,
+	"response_body" text,
+	"error_message" text,
+	"duration_ms" integer,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "teams_slug_unique" UNIQUE("slug")
-);
---> statement-breakpoint
-CREATE TABLE "users" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"email" text NOT NULL,
-	"password_hash" text NOT NULL,
-	"name" text,
-	"email_verified_at" timestamp with time zone,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "users_email_unique" UNIQUE("email")
+	"completed_at" timestamp with time zone,
+	"is_replay" boolean DEFAULT false NOT NULL
 );
 --> statement-breakpoint
 ALTER TABLE "api_keys" ADD CONSTRAINT "api_keys_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "deliveries" ADD CONSTRAINT "deliveries_event_id_events_id_fk" FOREIGN KEY ("event_id") REFERENCES "public"."events"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "deliveries" ADD CONSTRAINT "deliveries_endpoint_id_endpoints_id_fk" FOREIGN KEY ("endpoint_id") REFERENCES "public"."endpoints"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "deliveries" ADD CONSTRAINT "deliveries_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "endpoint_groups" ADD CONSTRAINT "endpoint_groups_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "endpoints" ADD CONSTRAINT "endpoints_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "events" ADD CONSTRAINT "events_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "events" ADD CONSTRAINT "events_endpoint_id_endpoints_id_fk" FOREIGN KEY ("endpoint_id") REFERENCES "public"."endpoints"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "events" ADD CONSTRAINT "events_endpoint_group_id_endpoint_groups_id_fk" FOREIGN KEY ("endpoint_group_id") REFERENCES "public"."endpoint_groups"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "events" ADD CONSTRAINT "events_replayed_from_event_id_events_id_fk" FOREIGN KEY ("replayed_from_event_id") REFERENCES "public"."events"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "endpoint_group_members" ADD CONSTRAINT "endpoint_group_members_group_id_endpoint_groups_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."endpoint_groups"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "endpoint_group_members" ADD CONSTRAINT "endpoint_group_members_endpoint_id_endpoints_id_fk" FOREIGN KEY ("endpoint_id") REFERENCES "public"."endpoints"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "deliveries" ADD CONSTRAINT "deliveries_event_id_events_id_fk" FOREIGN KEY ("event_id") REFERENCES "public"."events"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "deliveries" ADD CONSTRAINT "deliveries_endpoint_id_endpoints_id_fk" FOREIGN KEY ("endpoint_id") REFERENCES "public"."endpoints"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "deliveries" ADD CONSTRAINT "deliveries_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "api_keys_active_key_hash_idx" ON "api_keys" USING btree ("key_hash") WHERE "api_keys"."revoked_at" is null;--> statement-breakpoint
 CREATE INDEX "api_keys_user_id_idx" ON "api_keys" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "api_keys_key_prefix_idx" ON "api_keys" USING btree ("key_prefix");--> statement-breakpoint
-CREATE INDEX "deliveries_user_created_at_idx" ON "deliveries" USING btree ("user_id","created_at");--> statement-breakpoint
-CREATE INDEX "deliveries_user_status_idx" ON "deliveries" USING btree ("user_id","status");--> statement-breakpoint
-CREATE INDEX "deliveries_endpoint_status_created_idx" ON "deliveries" USING btree ("endpoint_id","status","created_at");--> statement-breakpoint
-CREATE INDEX "deliveries_retry_queue_idx" ON "deliveries" USING btree ("next_retry_at") WHERE "deliveries"."status" = 'retry_scheduled';--> statement-breakpoint
-CREATE INDEX "deliveries_event_id_idx" ON "deliveries" USING btree ("event_id");--> statement-breakpoint
+CREATE INDEX "endpoint_groups_user_id_idx" ON "endpoint_groups" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "endpoints_active_idx" ON "endpoints" USING btree ("user_id","is_active") WHERE "endpoints"."deleted_at" is null;--> statement-breakpoint
 CREATE INDEX "endpoints_user_id_idx" ON "endpoints" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "events_user_created_at_idx" ON "events" USING btree ("user_id","created_at");--> statement-breakpoint
 CREATE INDEX "events_user_event_type_idx" ON "events" USING btree ("user_id","event_type");--> statement-breakpoint
-CREATE UNIQUE INDEX "events_idempotency_key_idx" ON "events" USING btree ("idempotency_key") WHERE "events"."idempotency_key" is not null;--> statement-breakpoint
+CREATE UNIQUE INDEX "events_idempotency_key_idx" ON "events" USING btree ("user_id","idempotency_key") WHERE "events"."idempotency_key" is not null;--> statement-breakpoint
 CREATE INDEX "events_endpoint_id_idx" ON "events" USING btree ("endpoint_id");--> statement-breakpoint
-CREATE INDEX "events_replayed_from_idx" ON "events" USING btree ("replayed_from_event_id");
+CREATE INDEX "events_endpoint_group_id_idx" ON "events" USING btree ("endpoint_group_id");--> statement-breakpoint
+CREATE INDEX "events_replayed_from_idx" ON "events" USING btree ("replayed_from_event_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "endpoint_group_members_unique_idx" ON "endpoint_group_members" USING btree ("group_id","endpoint_id");--> statement-breakpoint
+CREATE INDEX "endpoint_group_members_group_id_idx" ON "endpoint_group_members" USING btree ("group_id");--> statement-breakpoint
+CREATE INDEX "endpoint_group_members_endpoint_id_idx" ON "endpoint_group_members" USING btree ("endpoint_id");--> statement-breakpoint
+CREATE INDEX "deliveries_user_created_at_idx" ON "deliveries" USING btree ("user_id","created_at");--> statement-breakpoint
+CREATE INDEX "deliveries_user_status_idx" ON "deliveries" USING btree ("user_id","status");--> statement-breakpoint
+CREATE INDEX "deliveries_endpoint_status_created_idx" ON "deliveries" USING btree ("endpoint_id","status","created_at");--> statement-breakpoint
+CREATE INDEX "deliveries_retry_queue_idx" ON "deliveries" USING btree ("next_retry_at") WHERE "deliveries"."status" = 'retry_scheduled';--> statement-breakpoint
+CREATE INDEX "deliveries_event_id_idx" ON "deliveries" USING btree ("event_id");

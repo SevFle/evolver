@@ -94,6 +94,12 @@ export const eventRouter = router({
         });
       }
 
+      if (!originalEvent.endpointId) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Event has no endpoint to replay against",
+        });
+      }
       const endpoint = await getEndpointById(originalEvent.endpointId, ctx.userId);
       if (!endpoint) {
         throw new TRPCError({

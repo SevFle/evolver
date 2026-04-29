@@ -98,4 +98,34 @@ describe("migration SQL completeness", () => {
     );
     expect(sql).toContain('"events_replayed_from_idx"');
   });
+
+  it("includes FK on replayed_from_event_id referencing events.id with onDelete set null", async () => {
+    const sql = await import("fs").then((fs) =>
+      fs.promises.readFile("drizzle/0000_steep_silver_centurion.sql", "utf-8"),
+    );
+    expect(sql).toContain(
+      '"events_replayed_from_event_id_events_id_fk" FOREIGN KEY ("replayed_from_event_id") REFERENCES "public"."events"("id") ON DELETE set null',
+    );
+  });
+
+  it("includes CHECK constraint for endpointId/endpointGroupId nullability", async () => {
+    const sql = await import("fs").then((fs) =>
+      fs.promises.readFile("drizzle/0000_steep_silver_centurion.sql", "utf-8"),
+    );
+    expect(sql).toContain(
+      'CONSTRAINT "events_target_check" CHECK ("endpoint_id" IS NOT NULL OR "endpoint_group_id" IS NOT NULL)',
+    );
+  });
+
+  it("includes uniqueIndex on idempotencyKey composite with userId", async () => {
+    const sql = await import("fs").then((fs) =>
+      fs.promises.readFile("drizzle/0000_steep_silver_centurion.sql", "utf-8"),
+    );
+    expect(sql).toContain(
+      'CREATE UNIQUE INDEX "events_idempotency_key_idx" ON "events" USING btree ("user_id","idempotency_key")',
+    );
+    expect(sql).toContain(
+      'WHERE "events"."idempotency_key" is not null',
+    );
+  });
 });

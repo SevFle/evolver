@@ -5,12 +5,14 @@ import { endpoints } from "./endpoints";
 import { events } from "./events";
 import { deliveries } from "./deliveries";
 import { teams } from "./teams";
+import { endpointGroups, endpointGroupMembers } from "./endpoint-groups";
 
 export const usersRelations = relations(users, ({ many }) => ({
   apiKeys: many(apiKeys),
   endpoints: many(endpoints),
   events: many(events),
   deliveries: many(deliveries),
+  endpointGroups: many(endpointGroups),
 }));
 
 export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
@@ -27,6 +29,7 @@ export const endpointsRelations = relations(endpoints, ({ one, many }) => ({
   }),
   events: many(events),
   deliveries: many(deliveries),
+  groupMemberships: many(endpointGroupMembers),
 }));
 
 export const eventsRelations = relations(events, ({ one, many }) => ({
@@ -37,6 +40,10 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
   endpoint: one(endpoints, {
     fields: [events.endpointId],
     references: [endpoints.id],
+  }),
+  endpointGroup: one(endpointGroups, {
+    fields: [events.endpointGroupId],
+    references: [endpointGroups.id],
   }),
   deliveries: many(deliveries),
   replayedFrom: one(events, {
@@ -66,4 +73,24 @@ export const deliveriesRelations = relations(deliveries, ({ one }) => ({
 
 export const teamsRelations = relations(teams, ({ many }) => ({
   users: many(users),
+}));
+
+export const endpointGroupsRelations = relations(endpointGroups, ({ one, many }) => ({
+  user: one(users, {
+    fields: [endpointGroups.userId],
+    references: [users.id],
+  }),
+  members: many(endpointGroupMembers),
+  events: many(events),
+}));
+
+export const endpointGroupMembersRelations = relations(endpointGroupMembers, ({ one }) => ({
+  group: one(endpointGroups, {
+    fields: [endpointGroupMembers.groupId],
+    references: [endpointGroups.id],
+  }),
+  endpoint: one(endpoints, {
+    fields: [endpointGroupMembers.endpointId],
+    references: [endpoints.id],
+  }),
 }));
