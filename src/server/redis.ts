@@ -8,7 +8,8 @@ export function getRedis(): Redis {
     if (url) {
       const options: Record<string, unknown> = { maxRetriesPerRequest: 3 };
       if (url.startsWith("rediss://")) {
-        options.tls = {};
+        const parsed = new URL(url);
+        options.tls = { rejectUnauthorized: true, servername: parsed.hostname };
       }
       redisClient = new Redis(url, options);
     } else {
@@ -27,7 +28,12 @@ export function getRedis(): Redis {
 
 export async function closeRedis(): Promise<void> {
   if (redisClient) {
-    await redisClient.quit();
-    redisClient = null;
+    try {
+      await redisClient.quit();
+    } catch {
+      redisClient.disconnect();
+    } finally {
+      redisClient = null;
+    }
   }
 }

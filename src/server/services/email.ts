@@ -80,7 +80,7 @@ export function composeFailureAlertEmail(alert: AlertPayload): ComposedEmail {
     `  <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">`,
     `    <tr><td style="padding: 8px 0; font-weight: 600; color: #374151;">Endpoint</td><td style="padding: 8px 0; color: #6b7280;">${escapeHtml(alert.endpointName)}</td></tr>`,
     `    <tr><td style="padding: 8px 0; font-weight: 600; color: #374151;">URL</td><td style="padding: 8px 0; color: #6b7280;"><code style="font-size: 13px;">${escapeHtml(alert.endpointUrl)}</code></td></tr>`,
-    `    <tr><td style="padding: 8px 0; font-weight: 600; color: #374151;">Failures</td><td style="padding: 8px 0; color: #dc2626; font-weight: 700;">${alert.failureCount} consecutive</td></tr>`,
+    `    <tr><td style="padding: 8px 0; font-weight: 600; color: #374151;">Failures</td><td style="padding: 8px 0; color: #dc2626; font-weight: 700;">${escapeHtml(alert.failureCount)} consecutive</td></tr>`,
     `    <tr><td style="padding: 8px 0; font-weight: 600; color: #374151;">Last Error</td><td style="padding: 8px 0; color: #6b7280;">${escapeHtml(alert.lastErrorMessage ?? "N/A")}</td></tr>`,
     `  </table>`,
     `  <p style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 12px; color: #991b1b; font-size: 14px;">The endpoint has been marked as <strong>degraded</strong>. No new deliveries will be attempted until it recovers.</p>`,
@@ -101,12 +101,13 @@ export function composeFailureAlertEmail(alert: AlertPayload): ComposedEmail {
   };
 }
 
-function escapeHtml(str: string): string {
-  return str
+function escapeHtml(str: string | number): string {
+  return String(str)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
 }
 
 export interface SendResult {

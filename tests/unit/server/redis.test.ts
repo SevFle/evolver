@@ -43,14 +43,14 @@ describe("redis", () => {
     );
   });
 
-  it("enables TLS for rediss:// URLs", async () => {
+  it("enables TLS for rediss:// URLs with rejectUnauthorized and servername", async () => {
     process.env.REDIS_URL = "rediss://:secret@tls-host:6380/0";
     const { getRedis } = await import("@/server/redis");
     getRedis();
 
     expect(Redis).toHaveBeenCalledWith(
       "rediss://:secret@tls-host:6380/0",
-      { maxRetriesPerRequest: 3, tls: {} },
+      { maxRetriesPerRequest: 3, tls: { rejectUnauthorized: true, servername: "tls-host" } },
     );
   });
 
@@ -113,6 +113,31 @@ describe("redis", () => {
       const { closeRedis } = await import("@/server/redis");
       await closeRedis();
       expect(mockRedisInstance.quit).not.toHaveBeenCalled();
+    });
+
+    it("falls back to disconnect when quit throws", async () => {
+      mockRedisInstance.quit.mockRejectedValueOnce(new Error("quit failed"));
+      const { getRedis, closeRedis } = await import("@/server/redis");
+      getRedis();
+
+      await closeRedis();
+
+      expect(mockRedisInstance.quit).toHaveBeenCalled();
+      expect(mockRedisInstance.disconnect).toHaveBeenCalled();
+
+      getRedis();
+      expect(Redis).toHaveBeenCalledTimes(2);
+    });
+
+    it("nulls the reference even when quit throws and disconnect is called", async () => {
+      mockRedisInstance.quit.mockRejectedValueOnce(new Error("quit failed"));
+      const { getRedis, closeRedis } = await import("@/server/redis");
+      getRedis();
+
+      await closeRedis();
+
+      getRedis();
+      expect(Redis).toHaveBeenCalledTimes(2);
     });
   });
 });

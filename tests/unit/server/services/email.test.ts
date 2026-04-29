@@ -184,6 +184,41 @@ describe("email service", () => {
       expect(email.html).toContain("&lt;script&gt;");
       expect(email.html).toContain("&quot;bad&quot;");
     });
+
+    it("escapes single quotes in HTML output", () => {
+      const alert: AlertPayload = {
+        ...baseAlert,
+        endpointName: "O'Brien's endpoint",
+        lastErrorMessage: "error: it's broken",
+      };
+      const email = composeFailureAlertEmail(alert);
+      expect(email.html).toContain("O&#x27;Brien&#x27;s endpoint");
+      expect(email.html).toContain("it&#x27;s broken");
+    });
+
+    it("escapes HTML in endpoint URL field", () => {
+      const alert: AlertPayload = {
+        ...baseAlert,
+        endpointUrl: 'https://evil.com/<img src=x onerror="alert(1)">',
+      };
+      const email = composeFailureAlertEmail(alert);
+      expect(email.html).toContain("&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");
+    });
+
+    it("escapes HTML in dashboard URL field", () => {
+      const alert: AlertPayload = {
+        ...baseAlert,
+        dashboardUrl: 'http://app.com/<script>"hack"</script>',
+      };
+      const email = composeFailureAlertEmail(alert);
+      expect(email.html).toContain("&lt;script&gt;");
+      expect(email.html).toContain("&quot;hack&quot;");
+    });
+
+    it("escapes failureCount in HTML body", () => {
+      const email = composeFailureAlertEmail(baseAlert);
+      expect(email.html).toContain(">5 consecutive<");
+    });
   });
 
   describe("sendFailureAlert", () => {
