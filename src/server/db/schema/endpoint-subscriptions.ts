@@ -42,7 +42,7 @@ export const endpointSubscriptions = pgTable(
       .on(table.userId, table.isActive)
       .where(sql`${table.isActive} = true`),
     endpointEventTypeUnique: uniqueIndex(
-      "endpoint_subscriptions_unique_idx",
+      "endpoint_subscriptions_endpoint_event_type_uniq",
     )
       .on(table.endpointId, table.eventType),
   }),

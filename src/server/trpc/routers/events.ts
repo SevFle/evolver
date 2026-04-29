@@ -118,6 +118,7 @@ export const eventRouter = router({
         idempotencyKey: input.idempotencyKey,
         metadata: input.metadata,
         source: input.source,
+        allowNoTarget: true,
       });
 
       if (!event) {
@@ -176,6 +177,7 @@ export const eventRouter = router({
         idempotencyKey: input.idempotencyKey,
         metadata: { ...input.metadata, _subscriptionFanout: true },
         source: input.source,
+        allowNoTarget: true,
       });
 
       if (!event) {

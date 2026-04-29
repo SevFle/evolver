@@ -17,6 +17,34 @@ import { generateApiKey, hashApiKey } from "@/server/auth/api-keys";
 import { validateEndpointUrl, SsrfValidationError } from "@/server/services/ssrf";
 import { TRPCError } from "@trpc/server";
 
+export function globMatch(pattern: string, input: string): boolean {
+  const pLen = pattern.length;
+  const iLen = input.length;
+  if (pLen === 0) return iLen === 0;
+
+  let prev = new Uint8Array(iLen + 1);
+  let curr = new Uint8Array(iLen + 1);
+
+  prev[0] = 1;
+  for (let j = 1; j <= iLen; j++) prev[j] = 0;
+
+  for (let i = 1; i <= pLen; i++) {
+    curr[0] = prev[0] === 1 && pattern[i - 1] === "*" ? 1 : 0;
+    for (let j = 1; j <= iLen; j++) {
+      if (pattern[i - 1] === "*") {
+        curr[j] = curr[j - 1] === 1 || prev[j] === 1 ? 1 : 0;
+      } else {
+        curr[j] = prev[j - 1] === 1 && pattern[i - 1] === input[j - 1] ? 1 : 0;
+      }
+    }
+    const tmp = prev;
+    prev = curr;
+    curr = tmp;
+  }
+
+  return prev[iLen] === 1;
+}
+
 export async function createEndpoint(
   userId: string,
   data: CreateEndpointRequest,
@@ -136,6 +164,12 @@ export async function deleteEndpoint(id: string, userId?: string) {
 export async function createEvent(data: SendEventRequest) {
   const endpointId = data.endpointId ?? null;
   const endpointGroupId = data.endpointGroupId ?? null;
+  if (!endpointId && !endpointGroupId && !data.allowNoTarget) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Must provide endpointId or endpointGroupId",
+    });
+  }
   const [event] = await db
     .insert(events)
     .values({
@@ -745,7 +779,10 @@ export async function createSubscription(
       endpointId,
       eventType,
     })
-    .onConflictDoNothing({ target: [endpointSubscriptions.endpointId, endpointSubscriptions.eventType] })
+    .onConflictDoUpdate({
+      target: [endpointSubscriptions.endpointId, endpointSubscriptions.eventType],
+      set: { isActive: true, updatedAt: new Date() },
+    })
     .returning();
 
   return subscription ?? null;
@@ -759,6 +796,7 @@ export async function getSubscriptionsByEndpointId(endpointId: string, userId: s
       and(
         eq(endpointSubscriptions.endpointId, endpointId),
         eq(endpointSubscriptions.userId, userId),
+        eq(endpointSubscriptions.isActive, true),
       ),
     )
     .orderBy(desc(endpointSubscriptions.createdAt));
@@ -768,13 +806,19 @@ export async function getSubscriptionsByUserId(userId: string) {
   return db
     .select()
     .from(endpointSubscriptions)
-    .where(eq(endpointSubscriptions.userId, userId))
+    .where(
+      and(
+        eq(endpointSubscriptions.userId, userId),
+        eq(endpointSubscriptions.isActive, true),
+      ),
+    )
     .orderBy(desc(endpointSubscriptions.createdAt));
 }
 
 export async function deleteSubscription(id: string, userId: string) {
   const [deleted] = await db
-    .delete(endpointSubscriptions)
+    .update(endpointSubscriptions)
+    .set({ isActive: false, updatedAt: new Date() })
     .where(
       and(
         eq(endpointSubscriptions.id, id),
@@ -825,13 +869,7 @@ export async function resolveSubscribedEndpoints(
 
   const matchingEndpointIds = new Set<string>();
   for (const sub of allSubs) {
-    if (sub.eventType === eventType) {
-      matchingEndpointIds.add(sub.endpointId);
-      continue;
-    }
-    const pattern = sub.eventType.replace(/\*/g, "%");
-    const regex = new RegExp("^" + pattern.replace(/%/g, ".*") + "$");
-    if (regex.test(eventType)) {
+    if (globMatch(sub.eventType, eventType)) {
       matchingEndpointIds.add(sub.endpointId);
     }
   }

@@ -115,6 +115,7 @@ async function handleSingleEvent(body: unknown, userId: string) {
       status: event.status,
       eventType: event.eventType,
       createdAt: event.createdAt,
+      deliveryJobs: 1,
     },
     { status: 202 },
   );
@@ -149,6 +150,7 @@ async function handleSubscriptionEvent(body: unknown, userId: string) {
     idempotencyKey: parsed.data.idempotencyKey,
     metadata: { ...parsed.data.metadata, _subscriptionFanout: true },
     source: parsed.data.source,
+    allowNoTarget: true,
   });
 
   if (!event) {
@@ -223,12 +225,13 @@ async function handleFanoutEvent(body: unknown, userId: string) {
   const event = await createEvent({
     userId,
     endpointId: undefined,
-    endpointGroupId: endpointGroupId ?? undefined,
+    endpointGroupId,
     payload: parsed.data.payload,
     eventType: parsed.data.eventType,
     idempotencyKey: parsed.data.idempotencyKey,
     metadata: parsed.data.metadata,
     source: parsed.data.source,
+    allowNoTarget: true,
   });
 
   if (!event) {

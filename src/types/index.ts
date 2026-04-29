@@ -70,6 +70,7 @@ export interface SendEventRequest {
   idempotencyKey?: string;
   metadata?: Record<string, unknown>;
   source?: string;
+  allowNoTarget?: boolean;
 }
 
 export interface SendFanoutEventRequest {

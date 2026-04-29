@@ -8,6 +8,7 @@ vi.mock("@/server/db/queries", () => ({
   getEndpointById: vi.fn(),
   createEvent: vi.fn(),
   resolveFanoutEndpoints: vi.fn(),
+  resolveSubscribedEndpoints: vi.fn(),
 }));
 
 vi.mock("@/server/queue/producer", () => ({
@@ -36,9 +37,9 @@ function makeReq(body: unknown, headers: Record<string, string> = {}) {
 }
 
 const fanoutEndpoints = [
-  { id: "ep-001", url: "https://a.example.com", name: "A", signingSecret: "s1", status: "active", isActive: true, customHeaders: null, userId: "user-a" },
-  { id: "ep-002", url: "https://b.example.com", name: "B", signingSecret: "s2", status: "active", isActive: true, customHeaders: null, userId: "user-a" },
-  { id: "ep-003", url: "https://c.example.com", name: "C", signingSecret: "s3", status: "active", isActive: true, customHeaders: null, userId: "user-a" },
+  { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1", url: "https://a.example.com", name: "A", signingSecret: "s1", status: "active", isActive: true, customHeaders: null, userId: "user-a" },
+  { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2", url: "https://b.example.com", name: "B", signingSecret: "s2", status: "active", isActive: true, customHeaders: null, userId: "user-a" },
+  { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3", url: "https://c.example.com", name: "C", signingSecret: "s3", status: "active", isActive: true, customHeaders: null, userId: "user-a" },
 ];
 
 describe("POST /api/v1/events — fan-out via endpointGroupId", () => {
@@ -60,7 +61,7 @@ describe("POST /api/v1/events — fan-out via endpointGroupId", () => {
     const { POST } = await import("@/app/api/v1/events/route");
     const res = await POST(
       makeReq({
-        endpointGroupId: "group-001",
+        endpointGroupId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1",
         payload: { orderId: "123" },
         eventType: "order.created",
       }),
@@ -74,7 +75,7 @@ describe("POST /api/v1/events — fan-out via endpointGroupId", () => {
     expect(mockedCreateEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: "user-a",
-        endpointGroupId: "group-001",
+        endpointGroupId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1",
       }),
     );
   });
@@ -93,7 +94,7 @@ describe("POST /api/v1/events — fan-out via endpointGroupId", () => {
     const { POST } = await import("@/app/api/v1/events/route");
     const res = await POST(
       makeReq({
-        endpointIds: ["ep-001", "ep-002", "ep-003"],
+        endpointIds: ["aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2", "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3"],
         payload: { orderId: "456" },
         eventType: "order.shipped",
       }),
@@ -124,7 +125,7 @@ describe("POST /api/v1/events — fan-out via endpointGroupId", () => {
     const { POST } = await import("@/app/api/v1/events/route");
     await POST(
       makeReq({
-        endpointGroupId: "group-001",
+        endpointGroupId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1",
         payload: {},
         eventType: "test.event",
       }),
@@ -133,17 +134,17 @@ describe("POST /api/v1/events — fan-out via endpointGroupId", () => {
     expect(mockedEnqueue).toHaveBeenCalledTimes(3);
     expect(mockedEnqueue).toHaveBeenCalledWith({
       eventId: "evt-3",
-      endpointId: "ep-001",
+      endpointId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1",
       attemptNumber: 1,
     });
     expect(mockedEnqueue).toHaveBeenCalledWith({
       eventId: "evt-3",
-      endpointId: "ep-002",
+      endpointId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2",
       attemptNumber: 1,
     });
     expect(mockedEnqueue).toHaveBeenCalledWith({
       eventId: "evt-3",
-      endpointId: "ep-003",
+      endpointId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3",
       attemptNumber: 1,
     });
   });
@@ -157,7 +158,7 @@ describe("POST /api/v1/events — fan-out via endpointGroupId", () => {
     const { POST } = await import("@/app/api/v1/events/route");
     const res = await POST(
       makeReq({
-        endpointGroupId: "group-missing",
+        endpointGroupId: "cccccccc-cccc-cccc-cccc-ccccccccccc1",
         payload: {},
         eventType: "test.event",
       }),
@@ -177,7 +178,7 @@ describe("POST /api/v1/events — fan-out via endpointGroupId", () => {
     const { POST } = await import("@/app/api/v1/events/route");
     const res = await POST(
       makeReq({
-        endpointGroupId: "group-empty",
+        endpointGroupId: "dddddddd-dddd-dddd-dddd-dddddddddddd",
         payload: {},
         eventType: "test.event",
       }),
@@ -214,7 +215,7 @@ describe("POST /api/v1/events — fan-out via endpointGroupId", () => {
     const { POST } = await import("@/app/api/v1/events/route");
     await POST(
       makeReq({
-        endpointGroupId: "group-001",
+        endpointGroupId: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee1",
         payload: {},
         eventType: "test.event",
         idempotencyKey: "unique-key-123",
@@ -262,6 +263,8 @@ describe("POST /api/v1/events — single endpoint still works", () => {
     );
 
     expect(res.status).toBe(202);
+    const body = await res.json();
+    expect(body.deliveryJobs).toBe(1);
     expect(mockedResolveFanout).not.toHaveBeenCalled();
     expect(mockedEnqueue).toHaveBeenCalledTimes(1);
   });
