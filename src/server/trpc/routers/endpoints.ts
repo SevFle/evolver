@@ -7,6 +7,11 @@ import {
   getEndpointById,
   updateEndpoint,
   deleteEndpoint,
+  getEndpointDeliveryStats,
+  getEndpointsWithStats,
+  rotateEndpointSecret,
+  updateEndpointConfig,
+  getRecentDeliveriesByEndpoint,
 } from "@/server/db/queries";
 
 const createEndpointSchema = z.object({
@@ -14,6 +19,8 @@ const createEndpointSchema = z.object({
   name: z.string().max(255).optional(),
   description: z.string().max(500).optional(),
   customHeaders: z.record(z.string(), z.string()).optional(),
+  maxRetries: z.number().int().min(0).max(10).optional(),
+  retrySchedule: z.array(z.number().int().min(0)).max(10).optional(),
 });
 
 const updateEndpointSchema = z.object({
@@ -22,6 +29,18 @@ const updateEndpointSchema = z.object({
   name: z.string().max(255).optional(),
   description: z.string().max(500).optional(),
   customHeaders: z.record(z.string(), z.string()).optional(),
+});
+
+const updateEndpointConfigSchema = z.object({
+  id: z.string().uuid(),
+  url: z.string().url("Must be a valid URL").optional(),
+  name: z.string().max(255).optional(),
+  description: z.string().max(500).optional(),
+  customHeaders: z.record(z.string(), z.string()).optional(),
+  isActive: z.boolean().optional(),
+  maxRetries: z.number().int().min(0).max(10).optional(),
+  retrySchedule: z.array(z.number().int().min(0)).max(10).optional(),
+  rateLimit: z.number().int().min(1).nullable().optional(),
 });
 
 export const endpointRouter = router({
@@ -42,12 +61,34 @@ export const endpointRouter = router({
     return getEndpointsByUserId(ctx.userId);
   }),
 
+  listWithStats: protectedProcedure.query(async ({ ctx }) => {
+    return getEndpointsWithStats(ctx.userId);
+  }),
+
   get: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
       const endpoint = await getEndpointById(input.id, ctx.userId);
       if (!endpoint) return null;
       return endpoint;
+    }),
+
+  getWithStats: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ input, ctx }) => {
+      const endpoint = await getEndpointById(input.id, ctx.userId);
+      if (!endpoint) return null;
+      const stats = await getEndpointDeliveryStats(input.id, ctx.userId);
+      return { ...endpoint, stats };
+    }),
+
+  getDeliveries: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }).optional())
+    .query(async ({ input, ctx }) => {
+      if (input?.id) {
+        return getRecentDeliveriesByEndpoint(input.id, ctx.userId);
+      }
+      return [];
     }),
 
   update: protectedProcedure
@@ -71,6 +112,27 @@ export const endpointRouter = router({
       return updated;
     }),
 
+  updateConfig: protectedProcedure
+    .input(updateEndpointConfigSchema)
+    .mutation(async ({ input, ctx }) => {
+      const { id, ...data } = input;
+      const endpoint = await getEndpointById(id, ctx.userId);
+      if (!endpoint) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Endpoint not found",
+        });
+      }
+      const updated = await updateEndpointConfig(id, ctx.userId, data);
+      if (!updated) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Endpoint not found",
+        });
+      }
+      return updated;
+    }),
+
   delete: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
@@ -83,5 +145,25 @@ export const endpointRouter = router({
       }
       await deleteEndpoint(input.id, ctx.userId);
       return { success: true };
+    }),
+
+  rotateSecret: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ input, ctx }) => {
+      const endpoint = await getEndpointById(input.id, ctx.userId);
+      if (!endpoint) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Endpoint not found",
+        });
+      }
+      const updated = await rotateEndpointSecret(input.id, ctx.userId);
+      if (!updated) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to rotate secret",
+        });
+      }
+      return { signingSecret: updated.signingSecret };
     }),
 });

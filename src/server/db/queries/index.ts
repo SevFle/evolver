@@ -547,6 +547,116 @@ export async function getGroupEndpointIds(groupId: string): Promise<string[]> {
   return rows.map((r) => r.endpointId);
 }
 
+export async function getEndpointDeliveryStats(endpointId: string, userId?: string) {
+  const conditions = userId
+    ? and(eq(deliveries.endpointId, endpointId), eq(deliveries.userId, userId))
+    : eq(deliveries.endpointId, endpointId);
+
+  const [stats] = await db
+    .select({
+      totalDeliveries: sql<number>`count(*)::int`,
+      successfulDeliveries: sql<number>`count(*) filter (where ${deliveries.status} = 'success')::int`,
+      failedDeliveries: sql<number>`count(*) filter (where ${deliveries.status} = 'failed')::int`,
+      lastDeliveryAt: sql<Date | null>`max(${deliveries.createdAt})`,
+      avgDurationMs: sql<number | null>`avg(${deliveries.durationMs})::int`,
+    })
+    .from(deliveries)
+    .where(conditions);
+
+  const successRate =
+    stats && stats.totalDeliveries > 0
+      ? Math.round((stats.successfulDeliveries / stats.totalDeliveries) * 100)
+      : null;
+
+  return {
+    totalDeliveries: stats?.totalDeliveries ?? 0,
+    successfulDeliveries: stats?.successfulDeliveries ?? 0,
+    failedDeliveries: stats?.failedDeliveries ?? 0,
+    successRate,
+    lastDeliveryAt: stats?.lastDeliveryAt ?? null,
+    avgDurationMs: stats?.avgDurationMs ?? null,
+  };
+}
+
+export async function getEndpointsWithStats(userId: string) {
+  const userEndpoints = await db
+    .select()
+    .from(endpoints)
+    .where(and(eq(endpoints.userId, userId), isNull(endpoints.deletedAt)))
+    .orderBy(desc(endpoints.createdAt));
+
+  const statsMap = new Map<string, Awaited<ReturnType<typeof getEndpointDeliveryStats>>>();
+
+  for (const ep of userEndpoints) {
+    const stats = await getEndpointDeliveryStats(ep.id, userId);
+    statsMap.set(ep.id, stats);
+  }
+
+  return userEndpoints.map((ep) => ({
+    ...ep,
+    stats: statsMap.get(ep.id) ?? {
+      totalDeliveries: 0,
+      successfulDeliveries: 0,
+      failedDeliveries: 0,
+      successRate: null,
+      lastDeliveryAt: null,
+      avgDurationMs: null,
+    },
+  }));
+}
+
+export async function rotateEndpointSecret(id: string, userId: string) {
+  const secret = generateSigningSecret();
+  const conditions = and(
+    eq(endpoints.id, id),
+    eq(endpoints.userId, userId),
+    isNull(endpoints.deletedAt),
+  );
+  const [updated] = await db
+    .update(endpoints)
+    .set({ signingSecret: secret, updatedAt: new Date() })
+    .where(conditions)
+    .returning();
+  return updated ?? null;
+}
+
+export async function updateEndpointConfig(
+  id: string,
+  userId: string,
+  data: {
+    url?: string;
+    name?: string;
+    description?: string | null;
+    customHeaders?: Record<string, string> | null;
+    isActive?: boolean;
+    maxRetries?: number;
+    retrySchedule?: number[];
+    rateLimit?: number | null;
+  },
+) {
+  if (data.url) {
+    try {
+      new URL(data.url);
+    } catch {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `Invalid URL: ${data.url}`,
+      });
+    }
+  }
+  const conditions = and(
+    eq(endpoints.id, id),
+    eq(endpoints.userId, userId),
+    isNull(endpoints.deletedAt),
+  );
+  const [updated] = await db
+    .update(endpoints)
+    .set({ ...data, updatedAt: new Date() })
+    .where(conditions)
+    .returning();
+  return updated ?? null;
+}
+
 export async function resolveFanoutEndpoints(
   userId: string,
   options: { endpointId?: string; endpointIds?: string[]; endpointGroupId?: string },
