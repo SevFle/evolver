@@ -583,6 +583,23 @@ export async function getUserById(id: string) {
   return user ?? null;
 }
 
+export async function getLastActualDeliveryTimeByEndpoint(
+  endpointId: string,
+): Promise<Date | null> {
+  const [row] = await db
+    .select({ createdAt: deliveries.createdAt })
+    .from(deliveries)
+    .where(
+      and(
+        eq(deliveries.endpointId, endpointId),
+        ne(deliveries.status, "circuit_open"),
+      ),
+    )
+    .orderBy(desc(deliveries.createdAt))
+    .limit(1);
+  return row?.createdAt ?? null;
+}
+
 export async function getLastErrorForEndpoint(endpointId: string): Promise<string | null> {
   const [row] = await db
     .select({ errorMessage: deliveries.errorMessage })

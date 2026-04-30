@@ -7,13 +7,18 @@ import {
   updateEventStatus,
   getSuccessfulDelivery,
   updateFanoutEventStatus,
+  getLastActualDeliveryTimeByEndpoint,
 } from "@/server/db/queries";
-import { deliverWebhook, isSuccessfulDelivery } from "@/server/services/delivery";
+import {
+  deliverWebhook,
+  isSuccessfulDelivery,
+} from "@/server/services/delivery";
 import { getNextRetryAt, hasRetriesRemaining } from "@/server/services/retry";
 import {
   processFailureAlert,
   resetAlertStateOnSuccess,
 } from "@/server/services/alerting";
+import { shouldSkipDelivery, isRecoveryAttempt } from "@/server/services/circuit";
 import { MAX_PAYLOAD_RESPONSE_SIZE } from "@/lib/constants";
 
 function truncateResponse(body: string): string {
@@ -22,7 +27,10 @@ function truncateResponse(body: string): string {
 }
 
 export async function handleDelivery(data: DeliveryJobData): Promise<void> {
-  const alreadyDelivered = await getSuccessfulDelivery(data.eventId, data.endpointId);
+  const alreadyDelivered = await getSuccessfulDelivery(
+    data.eventId,
+    data.endpointId,
+  );
   if (alreadyDelivered) {
     console.log(
       `Skipping duplicate delivery: event=${data.eventId} endpoint=${data.endpointId}`,
@@ -37,6 +45,7 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
   }
 
   const isFanout = !!event.endpointGroupId;
+  const isReplay = !!event.replayedFromEventId;
 
   const endpoint = await getEndpointById(data.endpointId);
   if (!endpoint || endpoint.status === "disabled" || !endpoint.isActive) {
@@ -47,6 +56,43 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
     }
     return;
   }
+
+  if (endpoint.status === "degraded") {
+    const lastDeliveryAt = await getLastActualDeliveryTimeByEndpoint(
+      endpoint.id,
+    );
+
+    if (shouldSkipDelivery(endpoint.status, lastDeliveryAt)) {
+      console.log(
+        `Circuit breaker open for endpoint ${endpoint.id} - skipping delivery`,
+      );
+      await createDelivery({
+        eventId: event.id,
+        endpointId: endpoint.id,
+        userId: event.userId,
+        attemptNumber: data.attemptNumber,
+        status: "circuit_open",
+        errorMessage: "Circuit breaker open - endpoint is degraded",
+        isReplay,
+      });
+
+      if (isFanout) {
+        await updateFanoutEventStatus(event.id);
+      } else {
+        await updateEventStatus(event.id, "failed");
+      }
+      return;
+    }
+
+    console.log(
+      `Circuit breaker half-open for endpoint ${endpoint.id} - attempting recovery delivery`,
+    );
+  }
+
+  const recoveryProbe = isRecoveryAttempt(
+    endpoint.status,
+    await getLastActualDeliveryTimeByEndpoint(endpoint.id),
+  );
 
   await updateEventStatus(event.id, "delivering");
 
@@ -60,8 +106,6 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
     );
 
     const success = isSuccessfulDelivery(result.statusCode);
-
-    const isReplay = !!event.replayedFromEventId;
 
     await createDelivery({
       eventId: event.id,
@@ -91,13 +135,13 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
         endpoint,
         data.attemptNumber,
         isFanout,
+        isReplay,
+        recoveryProbe,
       );
     }
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown delivery error";
-
-    const isReplay = !!event.replayedFromEventId;
 
     const requestHeaders: Record<string, string> = {
       "Content-Type": "application/json",
@@ -121,6 +165,8 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
       endpoint,
       data.attemptNumber,
       isFanout,
+      isReplay,
+      recoveryProbe,
     );
   }
 }
@@ -137,7 +183,27 @@ async function handleFailedDelivery(
   },
   attemptNumber: number,
   isFanout: boolean,
+  isReplay: boolean,
+  isRecoveryProbe: boolean,
 ): Promise<void> {
+  if (isRecoveryProbe) {
+    console.log(
+      `Recovery probe failed for endpoint ${endpoint.id} - keeping circuit open`,
+    );
+    await processFailureAlert({
+      endpointId: endpoint.id,
+      endpointName: endpoint.name,
+      endpointUrl: endpoint.url,
+      userId: endpoint.userId,
+    });
+    if (isFanout) {
+      await updateFanoutEventStatus(eventId);
+    } else {
+      await updateEventStatus(eventId, "failed");
+    }
+    return;
+  }
+
   const nextAttempt = attemptNumber + 1;
   const schedule = endpoint.retrySchedule ?? undefined;
   const maxRetries = endpoint.maxRetries ?? undefined;

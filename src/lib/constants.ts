@@ -14,4 +14,6 @@ export const MAX_PAYLOAD_RESPONSE_SIZE = 10 * 1024;
 
 export const EMAIL_RATE_LIMIT_MS = 60 * 60 * 1000;
 export const DEFAULT_EMAIL_FROM = "alerts@hookrelay.dev";
+export const CIRCUIT_RECOVERY_COOLDOWN_MS = 5 * 60 * 1000;
+
 export const EMAIL_ALERT_THRESHOLD = CIRCUIT_BREAKER_THRESHOLD;
