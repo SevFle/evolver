@@ -6,6 +6,7 @@ const mockGetEndpointById = vi.fn();
 const mockCreateDelivery = vi.fn().mockResolvedValue(undefined);
 const mockUpdateEventStatus = vi.fn().mockResolvedValue(undefined);
 const mockUpdateFanoutEventStatus = vi.fn().mockResolvedValue(undefined);
+const mockGetLastActualDeliveryTimeByEndpoint = vi.fn().mockResolvedValue(null);
 
 vi.mock("@/server/db/queries", () => ({
   getEndpointById: (...args: unknown[]) => mockGetEndpointById(...args),
@@ -14,6 +15,7 @@ vi.mock("@/server/db/queries", () => ({
   updateEventStatus: (...args: unknown[]) => mockUpdateEventStatus(...args),
   getSuccessfulDelivery: (...args: unknown[]) => mockGetSuccessfulDelivery(...args),
   updateFanoutEventStatus: (...args: unknown[]) => mockUpdateFanoutEventStatus(...args),
+  getLastActualDeliveryTimeByEndpoint: (...args: unknown[]) => mockGetLastActualDeliveryTimeByEndpoint(...args),
 }));
 
 const mockDeliverWebhook = vi.fn();
@@ -92,6 +94,7 @@ describe("handleDelivery", () => {
     mockCreateDelivery.mockResolvedValue(undefined);
     mockUpdateEventStatus.mockResolvedValue(undefined);
     mockUpdateFanoutEventStatus.mockResolvedValue(undefined);
+    mockGetLastActualDeliveryTimeByEndpoint.mockResolvedValue(null);
     mockProcessFailureAlert.mockResolvedValue({
       status: "active",
       alertSent: false,
@@ -352,6 +355,167 @@ describe("handleDelivery", () => {
       });
 
       expect(mockUpdateFanoutEventStatus).toHaveBeenCalledWith("evt-001");
+    });
+  });
+
+  describe("circuit breaker - lastDeliveryAt optimization", () => {
+    it("does not query lastDeliveryAt for active endpoints", async () => {
+      mockGetEndpointById.mockResolvedValue(baseEndpoint);
+      mockIsSuccessfulDelivery.mockReturnValue(true);
+
+      await handleDelivery({
+        eventId: "evt-001",
+        endpointId: "ep-001",
+        attemptNumber: 1,
+      });
+
+      expect(mockGetLastActualDeliveryTimeByEndpoint).not.toHaveBeenCalled();
+    });
+
+    it("queries lastDeliveryAt once for degraded endpoints", async () => {
+      const degradedEndpoint = { ...baseEndpoint, status: "degraded" as const };
+      mockGetEndpointById.mockResolvedValue(degradedEndpoint);
+      mockGetLastActualDeliveryTimeByEndpoint.mockResolvedValue(
+        new Date(Date.now() - 10 * 60 * 1000),
+      );
+      mockIsSuccessfulDelivery.mockReturnValue(true);
+
+      await handleDelivery({
+        eventId: "evt-001",
+        endpointId: "ep-001",
+        attemptNumber: 1,
+      });
+
+      expect(mockGetLastActualDeliveryTimeByEndpoint).toHaveBeenCalledTimes(1);
+      expect(mockGetLastActualDeliveryTimeByEndpoint).toHaveBeenCalledWith("ep-001");
+    });
+
+    it("reuses lastDeliveryAt for both shouldSkipDelivery and isRecoveryAttempt on half-open", async () => {
+      const degradedEndpoint = { ...baseEndpoint, status: "degraded" as const };
+      mockGetEndpointById.mockResolvedValue(degradedEndpoint);
+      const oldDelivery = new Date(Date.now() - 10 * 60 * 1000);
+      mockGetLastActualDeliveryTimeByEndpoint.mockResolvedValue(oldDelivery);
+      mockIsSuccessfulDelivery.mockReturnValue(true);
+
+      await handleDelivery({
+        eventId: "evt-001",
+        endpointId: "ep-001",
+        attemptNumber: 1,
+      });
+
+      expect(mockGetLastActualDeliveryTimeByEndpoint).toHaveBeenCalledTimes(1);
+      expect(mockDeliverWebhook).toHaveBeenCalled();
+    });
+  });
+
+  describe("circuit breaker open - delayed retry", () => {
+    it("creates pending delivery and schedules delayed retry when circuit is open", async () => {
+      const degradedEndpoint = { ...baseEndpoint, status: "degraded" as const };
+      mockGetEndpointById.mockResolvedValue(degradedEndpoint);
+      mockGetLastActualDeliveryTimeByEndpoint.mockResolvedValue(
+        new Date(Date.now() - 60_000),
+      );
+
+      await handleDelivery({
+        eventId: "evt-001",
+        endpointId: "ep-001",
+        attemptNumber: 1,
+      });
+
+      expect(mockCreateDelivery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventId: "evt-001",
+          endpointId: "ep-001",
+          status: "pending",
+          errorMessage: "Circuit breaker open - endpoint is degraded",
+          attemptNumber: 1,
+        }),
+      );
+      expect(mockEnqueueDelivery).toHaveBeenCalledWith(
+        { eventId: "evt-001", endpointId: "ep-001", attemptNumber: 1 },
+        5 * 60 * 1000,
+      );
+      expect(mockUpdateEventStatus).not.toHaveBeenCalledWith("evt-001", "failed");
+      expect(mockDeliverWebhook).not.toHaveBeenCalled();
+    });
+
+    it("does not mark event as failed when circuit is open", async () => {
+      const degradedEndpoint = { ...baseEndpoint, status: "degraded" as const };
+      mockGetEndpointById.mockResolvedValue(degradedEndpoint);
+      mockGetLastActualDeliveryTimeByEndpoint.mockResolvedValue(
+        new Date(Date.now() - 60_000),
+      );
+
+      await handleDelivery({
+        eventId: "evt-001",
+        endpointId: "ep-001",
+        attemptNumber: 1,
+      });
+
+      expect(mockUpdateEventStatus).not.toHaveBeenCalled();
+      expect(mockUpdateFanoutEventStatus).not.toHaveBeenCalled();
+    });
+
+    it("schedules retry with same attempt number for circuit-open delivery", async () => {
+      const degradedEndpoint = { ...baseEndpoint, status: "degraded" as const };
+      mockGetEndpointById.mockResolvedValue(degradedEndpoint);
+      mockGetLastActualDeliveryTimeByEndpoint.mockResolvedValue(
+        new Date(Date.now() - 30_000),
+      );
+
+      await handleDelivery({
+        eventId: "evt-001",
+        endpointId: "ep-001",
+        attemptNumber: 3,
+      });
+
+      expect(mockEnqueueDelivery).toHaveBeenCalledWith(
+        { eventId: "evt-001", endpointId: "ep-001", attemptNumber: 3 },
+        5 * 60 * 1000,
+      );
+    });
+
+    it("handles circuit-open for fanout events without marking failed", async () => {
+      const fanoutEvent = { ...baseEvent, endpointGroupId: "group-001" };
+      mockGetEventById.mockResolvedValue(fanoutEvent);
+      const degradedEndpoint = { ...baseEndpoint, status: "degraded" as const };
+      mockGetEndpointById.mockResolvedValue(degradedEndpoint);
+      mockGetLastActualDeliveryTimeByEndpoint.mockResolvedValue(
+        new Date(Date.now() - 60_000),
+      );
+
+      await handleDelivery({
+        eventId: "evt-001",
+        endpointId: "ep-001",
+        attemptNumber: 1,
+      });
+
+      expect(mockUpdateFanoutEventStatus).not.toHaveBeenCalled();
+      expect(mockUpdateEventStatus).not.toHaveBeenCalled();
+      expect(mockEnqueueDelivery).toHaveBeenCalled();
+    });
+
+    it("handles circuit-open for replay events", async () => {
+      const replayEvent = { ...baseEvent, replayedFromEventId: "evt-old" };
+      mockGetEventById.mockResolvedValue(replayEvent);
+      const degradedEndpoint = { ...baseEndpoint, status: "degraded" as const };
+      mockGetEndpointById.mockResolvedValue(degradedEndpoint);
+      mockGetLastActualDeliveryTimeByEndpoint.mockResolvedValue(
+        new Date(Date.now() - 60_000),
+      );
+
+      await handleDelivery({
+        eventId: "evt-001",
+        endpointId: "ep-001",
+        attemptNumber: 1,
+      });
+
+      expect(mockCreateDelivery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "pending",
+          isReplay: true,
+        }),
+      );
     });
   });
 });

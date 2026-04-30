@@ -10,6 +10,7 @@ vi.mock("@/server/db/queries", () => ({
   updateEndpoint: vi.fn(),
   getUserById: vi.fn(),
   getLastErrorForEndpoint: vi.fn(),
+  getLastActualDeliveryTimeByEndpoint: vi.fn(),
 }));
 
 vi.mock("@/server/services/delivery", () => ({
@@ -68,6 +69,7 @@ import {
   updateEndpoint,
   getUserById,
   getLastErrorForEndpoint,
+  getLastActualDeliveryTimeByEndpoint,
 } from "@/server/db/queries";
 import { deliverWebhook, isSuccessfulDelivery } from "@/server/services/delivery";
 import { enqueueDelivery, enqueueDeadLetter } from "@/server/queue/producer";
@@ -138,6 +140,7 @@ beforeEach(async () => {
   vi.mocked(enqueueDeadLetter).mockResolvedValue("dlq-123");
   vi.mocked(getUserById).mockResolvedValue({ id: "user-001", email: "dev@example.com", name: "Dev" });
   vi.mocked(getLastErrorForEndpoint).mockResolvedValue("Connection refused");
+  vi.mocked(getLastActualDeliveryTimeByEndpoint).mockResolvedValue(null);
   vi.mocked(sendFailureAlert).mockResolvedValue({ success: true, provider: "log" });
 });
 

@@ -19,7 +19,7 @@ import {
   resetAlertStateOnSuccess,
 } from "@/server/services/alerting";
 import { shouldSkipDelivery, isRecoveryAttempt } from "@/server/services/circuit";
-import { MAX_PAYLOAD_RESPONSE_SIZE } from "@/lib/constants";
+import { MAX_PAYLOAD_RESPONSE_SIZE, CIRCUIT_RECOVERY_COOLDOWN_MS } from "@/lib/constants";
 
 function truncateResponse(body: string): string {
   if (body.length <= MAX_PAYLOAD_RESPONSE_SIZE) return body;
@@ -57,42 +57,39 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
     return;
   }
 
-  if (endpoint.status === "degraded") {
-    const lastDeliveryAt = await getLastActualDeliveryTimeByEndpoint(
-      endpoint.id,
+  let lastDeliveryAt: Date | null = null;
+  if (endpoint.status !== "active") {
+    lastDeliveryAt = await getLastActualDeliveryTimeByEndpoint(endpoint.id);
+  }
+
+  if (shouldSkipDelivery(endpoint.status, lastDeliveryAt)) {
+    console.log(
+      `Circuit breaker open for endpoint ${endpoint.id} - scheduling delayed retry`,
     );
+    await createDelivery({
+      eventId: event.id,
+      endpointId: endpoint.id,
+      userId: event.userId,
+      attemptNumber: data.attemptNumber,
+      status: "pending",
+      errorMessage: "Circuit breaker open - endpoint is degraded",
+      isReplay,
+    });
 
-    if (shouldSkipDelivery(endpoint.status, lastDeliveryAt)) {
-      console.log(
-        `Circuit breaker open for endpoint ${endpoint.id} - skipping delivery`,
-      );
-      await createDelivery({
-        eventId: event.id,
-        endpointId: endpoint.id,
-        userId: event.userId,
-        attemptNumber: data.attemptNumber,
-        status: "circuit_open",
-        errorMessage: "Circuit breaker open - endpoint is degraded",
-        isReplay,
-      });
+    await enqueueDelivery(
+      { eventId: event.id, endpointId: endpoint.id, attemptNumber: data.attemptNumber },
+      CIRCUIT_RECOVERY_COOLDOWN_MS,
+    );
+    return;
+  }
 
-      if (isFanout) {
-        await updateFanoutEventStatus(event.id);
-      } else {
-        await updateEventStatus(event.id, "failed");
-      }
-      return;
-    }
+  const recoveryProbe = isRecoveryAttempt(endpoint.status, lastDeliveryAt);
 
+  if (recoveryProbe) {
     console.log(
       `Circuit breaker half-open for endpoint ${endpoint.id} - attempting recovery delivery`,
     );
   }
-
-  const recoveryProbe = isRecoveryAttempt(
-    endpoint.status,
-    await getLastActualDeliveryTimeByEndpoint(endpoint.id),
-  );
 
   await updateEventStatus(event.id, "delivering");
 
