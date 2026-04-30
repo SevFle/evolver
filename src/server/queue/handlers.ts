@@ -8,7 +8,8 @@ import {
   getSuccessfulDelivery,
   updateFanoutEventStatus,
   getLastActualDeliveryTimeByEndpoint,
-  countCircuitOpenRetries,
+  atomicCircuitOpenCountAndCreate,
+  updateDeliveryStatus,
   deleteDeliveryById,
 } from "@/server/db/queries";
 import {
@@ -65,11 +66,22 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
   }
 
   if (shouldSkipDelivery(endpoint.status, lastDeliveryAt)) {
-    const circuitRetryCount = await countCircuitOpenRetries(event.id, endpoint.id);
+    const { count: circuitRetryCount, delivery: deliveryRecord } = await atomicCircuitOpenCountAndCreate({
+      eventId: event.id,
+      endpointId: endpoint.id,
+      userId: event.userId,
+      attemptNumber: data.attemptNumber,
+      isReplay,
+    });
 
     if (circuitRetryCount >= MAX_CIRCUIT_OPEN_RETRIES) {
       console.warn(
         `Max circuit-open retries (${MAX_CIRCUIT_OPEN_RETRIES}) reached for event=${event.id} endpoint=${endpoint.id} - dead-lettering`,
+      );
+      await updateDeliveryStatus(
+        deliveryRecord.id,
+        "dead_letter",
+        `Max circuit-open retries (${MAX_CIRCUIT_OPEN_RETRIES}) exhausted`,
       );
       await enqueueDeadLetter(
         { eventId: event.id, endpointId: endpoint.id, attemptNumber: data.attemptNumber },
@@ -86,24 +98,6 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
     console.log(
       `Circuit breaker open for endpoint ${endpoint.id} - scheduling delayed retry (${circuitRetryCount + 1}/${MAX_CIRCUIT_OPEN_RETRIES})`,
     );
-
-    let deliveryRecord;
-    try {
-      deliveryRecord = await createDelivery({
-        eventId: event.id,
-        endpointId: endpoint.id,
-        userId: event.userId,
-        attemptNumber: data.attemptNumber,
-        status: "circuit_open",
-        errorMessage: "Circuit breaker open - endpoint is degraded",
-        isReplay,
-      });
-    } catch (err) {
-      console.error(
-        `Failed to create circuit-open delivery record: ${err instanceof Error ? err.message : err}`,
-      );
-      return;
-    }
 
     try {
       await enqueueDelivery(
@@ -151,7 +145,7 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
 
     const success = isSuccessfulDelivery(result.statusCode);
 
-    await createDelivery({
+    const delivery = await createDelivery({
       eventId: event.id,
       endpointId: endpoint.id,
       userId: event.userId,
@@ -181,6 +175,7 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
         isFanout,
         isReplay,
         recoveryProbe,
+        delivery!.id,
       );
     }
   } catch (error) {
@@ -193,7 +188,7 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
       ...(endpoint.customHeaders as Record<string, string> | null ?? {}),
     };
 
-    await createDelivery({
+    const delivery = await createDelivery({
       eventId: event.id,
       endpointId: endpoint.id,
       userId: event.userId,
@@ -211,6 +206,7 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
       isFanout,
       isReplay,
       recoveryProbe,
+      delivery!.id,
     );
   }
 }
@@ -229,6 +225,7 @@ async function handleFailedDelivery(
   isFanout: boolean,
   isReplay: boolean,
   isRecoveryProbe: boolean,
+  deliveryId?: string,
 ): Promise<void> {
   if (isRecoveryProbe) {
     console.log(
@@ -261,6 +258,9 @@ async function handleFailedDelivery(
       Math.max(delayMs, 0),
     );
   } else {
+    if (deliveryId) {
+      await updateDeliveryStatus(deliveryId, "dead_letter", `Max retries (${attemptNumber}) exhausted`);
+    }
     await enqueueDeadLetter(
       { eventId, endpointId: endpoint.id, attemptNumber },
       `Max retries (${attemptNumber}) exhausted`,

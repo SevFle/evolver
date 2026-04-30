@@ -519,6 +519,78 @@ export async function deleteDeliveryById(id: string): Promise<void> {
   await db.delete(deliveries).where(eq(deliveries.id, id));
 }
 
+export async function atomicCircuitOpenCountAndCreate(data: {
+  eventId: string;
+  endpointId: string;
+  userId: string;
+  attemptNumber: number;
+  isReplay: boolean;
+}): Promise<{ count: number; delivery: { id: string } }> {
+  return await db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(deliveries)
+      .where(
+        and(
+          eq(deliveries.eventId, data.eventId),
+          eq(deliveries.endpointId, data.endpointId),
+          eq(deliveries.status, "circuit_open"),
+        ),
+      );
+    const count = row?.count ?? 0;
+
+    if (count > 0) {
+      await tx
+        .update(deliveries)
+        .set({
+          status: "failed",
+          errorMessage: "Superseded by newer circuit_open delivery",
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(deliveries.eventId, data.eventId),
+            eq(deliveries.endpointId, data.endpointId),
+            eq(deliveries.status, "circuit_open"),
+          ),
+        );
+    }
+
+    const [delivery] = await tx
+      .insert(deliveries)
+      .values({
+        eventId: data.eventId,
+        endpointId: data.endpointId,
+        userId: data.userId,
+        attemptNumber: data.attemptNumber,
+        status: "circuit_open",
+        errorMessage: "Circuit breaker open - endpoint is degraded",
+        isReplay: data.isReplay,
+      })
+      .returning();
+
+    if (!delivery) {
+      throw new Error("Failed to create circuit_open delivery record");
+    }
+    return { count, delivery: { id: delivery.id } };
+  });
+}
+
+export async function updateDeliveryStatus(
+  id: string,
+  status: DeliveryStatus,
+  errorMessage?: string | null,
+): Promise<void> {
+  const updates: Record<string, unknown> = { status, updatedAt: new Date() };
+  if (errorMessage != null) {
+    updates.errorMessage = errorMessage;
+  }
+  await db
+    .update(deliveries)
+    .set(updates)
+    .where(eq(deliveries.id, id));
+}
+
 export async function countSuccessfulDeliveries(eventId: string): Promise<number> {
   const [row] = await db
     .select({ count: sql<number>`count(*)::int` })
