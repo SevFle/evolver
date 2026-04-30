@@ -8,6 +8,8 @@ import {
   getSuccessfulDelivery,
   updateFanoutEventStatus,
   getLastActualDeliveryTimeByEndpoint,
+  countCircuitOpenRetries,
+  deleteDeliveryById,
 } from "@/server/db/queries";
 import {
   deliverWebhook,
@@ -19,7 +21,7 @@ import {
   resetAlertStateOnSuccess,
 } from "@/server/services/alerting";
 import { shouldSkipDelivery, isRecoveryAttempt } from "@/server/services/circuit";
-import { MAX_PAYLOAD_RESPONSE_SIZE, CIRCUIT_RECOVERY_COOLDOWN_MS } from "@/lib/constants";
+import { MAX_PAYLOAD_RESPONSE_SIZE, CIRCUIT_RECOVERY_COOLDOWN_MS, MAX_CIRCUIT_OPEN_RETRIES } from "@/lib/constants";
 
 function truncateResponse(body: string): string {
   if (body.length <= MAX_PAYLOAD_RESPONSE_SIZE) return body;
@@ -63,23 +65,68 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
   }
 
   if (shouldSkipDelivery(endpoint.status, lastDeliveryAt)) {
-    console.log(
-      `Circuit breaker open for endpoint ${endpoint.id} - scheduling delayed retry`,
-    );
-    await createDelivery({
-      eventId: event.id,
-      endpointId: endpoint.id,
-      userId: event.userId,
-      attemptNumber: data.attemptNumber,
-      status: "pending",
-      errorMessage: "Circuit breaker open - endpoint is degraded",
-      isReplay,
-    });
+    const circuitRetryCount = await countCircuitOpenRetries(event.id, endpoint.id);
 
-    await enqueueDelivery(
-      { eventId: event.id, endpointId: endpoint.id, attemptNumber: data.attemptNumber },
-      CIRCUIT_RECOVERY_COOLDOWN_MS,
+    if (circuitRetryCount >= MAX_CIRCUIT_OPEN_RETRIES) {
+      console.warn(
+        `Max circuit-open retries (${MAX_CIRCUIT_OPEN_RETRIES}) reached for event=${event.id} endpoint=${endpoint.id} - dead-lettering`,
+      );
+      await enqueueDeadLetter(
+        { eventId: event.id, endpointId: endpoint.id, attemptNumber: data.attemptNumber },
+        `Max circuit-open retries (${MAX_CIRCUIT_OPEN_RETRIES}) exhausted`,
+      );
+      if (isFanout) {
+        await updateFanoutEventStatus(event.id);
+      } else {
+        await updateEventStatus(event.id, "failed");
+      }
+      return;
+    }
+
+    console.log(
+      `Circuit breaker open for endpoint ${endpoint.id} - scheduling delayed retry (${circuitRetryCount + 1}/${MAX_CIRCUIT_OPEN_RETRIES})`,
     );
+
+    let deliveryRecord;
+    try {
+      deliveryRecord = await createDelivery({
+        eventId: event.id,
+        endpointId: endpoint.id,
+        userId: event.userId,
+        attemptNumber: data.attemptNumber,
+        status: "circuit_open",
+        errorMessage: "Circuit breaker open - endpoint is degraded",
+        isReplay,
+      });
+    } catch (err) {
+      console.error(
+        `Failed to create circuit-open delivery record: ${err instanceof Error ? err.message : err}`,
+      );
+      return;
+    }
+
+    try {
+      await enqueueDelivery(
+        { eventId: event.id, endpointId: endpoint.id, attemptNumber: data.attemptNumber },
+        CIRCUIT_RECOVERY_COOLDOWN_MS,
+      );
+    } catch (enqueueErr) {
+      console.error(
+        `Failed to enqueue circuit-open retry: ${enqueueErr instanceof Error ? enqueueErr.message : enqueueErr}`,
+      );
+      if (deliveryRecord?.id) {
+        try {
+          await deleteDeliveryById(deliveryRecord.id);
+          console.log(`Compensated: deleted orphaned delivery ${deliveryRecord.id}`);
+        } catch (compensateErr) {
+          console.error(
+            `Failed to compensate delivery record: ${compensateErr instanceof Error ? compensateErr.message : compensateErr}`,
+          );
+        }
+      }
+      return;
+    }
+
     return;
   }
 

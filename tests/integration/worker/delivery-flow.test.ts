@@ -11,6 +11,8 @@ vi.mock("@/server/db/queries", () => ({
   getUserById: vi.fn(),
   getLastErrorForEndpoint: vi.fn(),
   getLastActualDeliveryTimeByEndpoint: vi.fn(),
+  countCircuitOpenRetries: vi.fn().mockResolvedValue(0),
+  deleteDeliveryById: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@/server/services/delivery", () => ({

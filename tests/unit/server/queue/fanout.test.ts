@@ -23,6 +23,8 @@ vi.mock("@/server/db/queries", () => ({
   getUserById: (...args: unknown[]) => mockGetUserById(...args),
   getLastErrorForEndpoint: (...args: unknown[]) => mockGetLastErrorForEndpoint(...args),
   getLastActualDeliveryTimeByEndpoint: vi.fn().mockResolvedValue(null),
+  countCircuitOpenRetries: vi.fn().mockResolvedValue(0),
+  deleteDeliveryById: vi.fn().mockResolvedValue(undefined),
 }));
 
 const mockDeliverWebhook = vi.fn();

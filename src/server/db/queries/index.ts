@@ -492,10 +492,31 @@ export async function countPendingDeliveries(eventId: string): Promise<number> {
     .where(
       and(
         eq(deliveries.eventId, eventId),
-        sql`${deliveries.status} in ('pending', 'processing', 'retry_scheduled')`,
+        sql`${deliveries.status} in ('pending', 'processing', 'retry_scheduled', 'circuit_open')`,
       ),
     );
   return row?.count ?? 0;
+}
+
+export async function countCircuitOpenRetries(
+  eventId: string,
+  endpointId: string,
+): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(deliveries)
+    .where(
+      and(
+        eq(deliveries.eventId, eventId),
+        eq(deliveries.endpointId, endpointId),
+        eq(deliveries.status, "circuit_open"),
+      ),
+    );
+  return row?.count ?? 0;
+}
+
+export async function deleteDeliveryById(id: string): Promise<void> {
+  await db.delete(deliveries).where(eq(deliveries.id, id));
 }
 
 export async function countSuccessfulDeliveries(eventId: string): Promise<number> {

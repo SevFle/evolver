@@ -26,6 +26,8 @@ vi.mock("@/server/db/queries", () => ({
     email: "dev@example.com",
   }),
   getLastErrorForEndpoint: vi.fn().mockResolvedValue(null),
+  countCircuitOpenRetries: vi.fn().mockResolvedValue(0),
+  deleteDeliveryById: vi.fn().mockResolvedValue(undefined),
 }));
 
 const mockDeliverWebhook = vi.fn();

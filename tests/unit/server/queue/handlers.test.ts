@@ -7,6 +7,8 @@ const mockCreateDelivery = vi.fn().mockResolvedValue(undefined);
 const mockUpdateEventStatus = vi.fn().mockResolvedValue(undefined);
 const mockUpdateFanoutEventStatus = vi.fn().mockResolvedValue(undefined);
 const mockGetLastActualDeliveryTimeByEndpoint = vi.fn().mockResolvedValue(null);
+const mockCountCircuitOpenRetries = vi.fn().mockResolvedValue(0);
+const mockDeleteDeliveryById = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("@/server/db/queries", () => ({
   getEndpointById: (...args: unknown[]) => mockGetEndpointById(...args),
@@ -16,6 +18,8 @@ vi.mock("@/server/db/queries", () => ({
   getSuccessfulDelivery: (...args: unknown[]) => mockGetSuccessfulDelivery(...args),
   updateFanoutEventStatus: (...args: unknown[]) => mockUpdateFanoutEventStatus(...args),
   getLastActualDeliveryTimeByEndpoint: (...args: unknown[]) => mockGetLastActualDeliveryTimeByEndpoint(...args),
+  countCircuitOpenRetries: (...args: unknown[]) => mockCountCircuitOpenRetries(...args),
+  deleteDeliveryById: (...args: unknown[]) => mockDeleteDeliveryById(...args),
 }));
 
 const mockDeliverWebhook = vi.fn();
@@ -95,6 +99,8 @@ describe("handleDelivery", () => {
     mockUpdateEventStatus.mockResolvedValue(undefined);
     mockUpdateFanoutEventStatus.mockResolvedValue(undefined);
     mockGetLastActualDeliveryTimeByEndpoint.mockResolvedValue(null);
+    mockCountCircuitOpenRetries.mockResolvedValue(0);
+    mockDeleteDeliveryById.mockResolvedValue(undefined);
     mockProcessFailureAlert.mockResolvedValue({
       status: "active",
       alertSent: false,
@@ -426,7 +432,7 @@ describe("handleDelivery", () => {
         expect.objectContaining({
           eventId: "evt-001",
           endpointId: "ep-001",
-          status: "pending",
+          status: "circuit_open",
           errorMessage: "Circuit breaker open - endpoint is degraded",
           attemptNumber: 1,
         }),
@@ -512,7 +518,7 @@ describe("handleDelivery", () => {
 
       expect(mockCreateDelivery).toHaveBeenCalledWith(
         expect.objectContaining({
-          status: "pending",
+          status: "circuit_open",
           isReplay: true,
         }),
       );
