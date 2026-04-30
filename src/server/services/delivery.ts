@@ -84,6 +84,7 @@ export async function deliverWebhook(
     method: "POST",
     headers,
     body,
+    redirect: "error",
     signal: AbortSignal.timeout(DELIVERY_TIMEOUT_MS),
   });
 

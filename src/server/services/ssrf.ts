@@ -48,6 +48,12 @@ function isRawIpv6(hostname: string): boolean {
   return hostname.includes(":");
 }
 
+function stripBrackets(hostname: string): string {
+  return hostname.startsWith("[") && hostname.endsWith("]")
+    ? hostname.slice(1, -1)
+    : hostname;
+}
+
 export class SsrfValidationError extends Error {
   constructor(message: string) {
     super(message);
@@ -69,11 +75,30 @@ export async function validateDeliveryUrl(url: string): Promise<void> {
     );
   }
 
-  const hostname = parsed.hostname.toLowerCase();
+  const hostname = stripBrackets(parsed.hostname.toLowerCase());
 
   if (BLOCKED_METADATA_HOSTNAMES.has(hostname)) {
     throw new SsrfValidationError(
       `Blocked metadata endpoint: ${hostname}`,
+    );
+  }
+
+  // Raw-IP literals (including hex/octal/decimal-encoded forms which the
+  // WHATWG URL parser normalizes to dotted-decimal). DNS resolve would fail
+  // with ENOTFOUND on raw IPs, so check explicitly to avoid bypass via the
+  // "could not resolve" path being misinterpreted at higher layers.
+  if (isRawIpv4(hostname)) {
+    if (isPrivateIpv4(hostname)) {
+      throw new SsrfValidationError(
+        `URL hostname is a private IP address: ${hostname}`,
+      );
+    }
+    return;
+  }
+
+  if (isRawIpv6(hostname) && isPrivateIpv6(hostname)) {
+    throw new SsrfValidationError(
+      `URL hostname is a private IPv6 address: ${hostname}`,
     );
   }
 
@@ -128,7 +153,7 @@ export function validateEndpointUrl(url: string): void {
     );
   }
 
-  const hostname = parsed.hostname.toLowerCase();
+  const hostname = stripBrackets(parsed.hostname.toLowerCase());
 
   if (BLOCKED_METADATA_HOSTNAMES.has(hostname)) {
     throw new SsrfValidationError(
