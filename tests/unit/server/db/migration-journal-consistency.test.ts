@@ -14,8 +14,8 @@ describe("drizzle journal — structure", () => {
     expect(journal.dialect).toBe("postgresql");
   });
 
-  it("has exactly 4 entries", () => {
-    expect(journal.entries).toHaveLength(4);
+  it("has exactly 5 entries", () => {
+    expect(journal.entries).toHaveLength(5);
   });
 });
 
@@ -53,6 +53,7 @@ describe("drizzle journal — tags match migration files", () => {
     { idx: 1, tag: "0001_giant_squirrel_girl" },
     { idx: 2, tag: "0002_happy_mathemanic" },
     { idx: 3, tag: "0003_calm_crimson_falcon" },
+    { idx: 4, tag: "0004_add_circuit_open_unique_index" },
   ];
 
   it("journal tags match expected migration names", () => {
@@ -131,8 +132,14 @@ describe("drizzle journal — migration chain integrity", () => {
     expect(m3).toContain("events_delivery_mode_check");
   });
 
-  it("no migration after 0003 exists (journal is up to date)", () => {
-    const hasM4 = existsSync("drizzle/0004_*.sql");
-    expect(hasM4).toBe(false);
+  it("migration 0004 creates unique partial index on deliveries for circuit_open", () => {
+    const m4 = readFileSync("drizzle/0004_add_circuit_open_unique_index.sql", "utf-8");
+    expect(m4).toContain("deliveries_circuit_open_uniq");
+    expect(m4).toContain("CREATE UNIQUE INDEX");
+  });
+
+  it("no migration after 0004 exists (journal is up to date)", () => {
+    const hasM5 = existsSync("drizzle/0005_*.sql");
+    expect(hasM5).toBe(false);
   });
 });

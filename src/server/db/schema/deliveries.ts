@@ -9,7 +9,7 @@ import {
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { users } from "./users";
 import { events } from "./events";
 import { endpoints } from "./endpoints";
@@ -61,10 +61,10 @@ export const deliveries = pgTable(
     ).on(table.endpointId, table.status, table.createdAt),
     retryQueueIdx: index("deliveries_retry_queue_idx")
       .on(table.nextRetryAt)
-      .where(sql`${table.status} = 'retry_scheduled'`),
+      .where(eq(table.status, "retry_scheduled")),
     eventIdIdx: index("deliveries_event_id_idx").on(table.eventId),
     circuitOpenUniqueIdx: uniqueIndex("deliveries_circuit_open_uniq")
       .on(table.eventId, table.endpointId)
-      .where(sql`${table.status} = 'circuit_open'`),
+      .where(eq(table.status, "circuit_open")),
   }),
 );
