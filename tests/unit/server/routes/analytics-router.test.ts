@@ -1,10 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockGetAnalyticsOverview = vi.fn();
-const mockGetDeliveryTimeline = vi.fn();
-const mockGetStatusCodeBreakdown = vi.fn();
-const mockGetLatencyHistogram = vi.fn();
-const mockGetEndpointHealthSummary = vi.fn();
+const {
+  mockGetAnalyticsOverview,
+  mockGetDeliveryTimeline,
+  mockGetStatusCodeBreakdown,
+  mockGetLatencyHistogram,
+  mockGetEndpointHealthSummary,
+} = vi.hoisted(() => ({
+  mockGetAnalyticsOverview: vi.fn(),
+  mockGetDeliveryTimeline: vi.fn(),
+  mockGetStatusCodeBreakdown: vi.fn(),
+  mockGetLatencyHistogram: vi.fn(),
+  mockGetEndpointHealthSummary: vi.fn(),
+}));
 
 vi.mock("@/server/db/queries/analytics", () => ({
   getAnalyticsOverview: mockGetAnalyticsOverview,
@@ -56,8 +64,8 @@ describe("analytics router — overview", () => {
       p99Latency: 500,
     });
     const caller = createCaller({ userId: "user-1" });
-    await caller.analytics.overview({ range: "24h", endpointId: "ep-123" });
-    expect(mockGetAnalyticsOverview).toHaveBeenCalledWith("user-1", "24h", "ep-123");
+    await caller.analytics.overview({ range: "24h", endpointId: "00000000-0000-0000-0000-000000000123" });
+    expect(mockGetAnalyticsOverview).toHaveBeenCalledWith("user-1", "24h", "00000000-0000-0000-0000-000000000123");
   });
 
   it("rejects invalid range values", async () => {
@@ -94,8 +102,8 @@ describe("analytics router — timeline", () => {
   it("passes endpointId filter", async () => {
     mockGetDeliveryTimeline.mockResolvedValueOnce([]);
     const caller = createCaller({ userId: "user-1" });
-    await caller.analytics.timeline({ range: "7d", endpointId: "ep-456" });
-    expect(mockGetDeliveryTimeline).toHaveBeenCalledWith("user-1", "7d", "ep-456");
+    await caller.analytics.timeline({ range: "7d", endpointId: "00000000-0000-0000-0000-000000000456" });
+    expect(mockGetDeliveryTimeline).toHaveBeenCalledWith("user-1", "7d", "00000000-0000-0000-0000-000000000456");
   });
 });
 
@@ -137,8 +145,8 @@ describe("analytics router — latencyHistogram", () => {
   it("passes endpointId to getLatencyHistogram", async () => {
     mockGetLatencyHistogram.mockResolvedValueOnce([]);
     const caller = createCaller({ userId: "user-1" });
-    await caller.analytics.latencyHistogram({ range: "24h", endpointId: "ep-789" });
-    expect(mockGetLatencyHistogram).toHaveBeenCalledWith("user-1", "24h", "ep-789");
+    await caller.analytics.latencyHistogram({ range: "24h", endpointId: "00000000-0000-0000-0000-000000000789" });
+    expect(mockGetLatencyHistogram).toHaveBeenCalledWith("user-1", "24h", "00000000-0000-0000-0000-000000000789");
   });
 });
 
