@@ -1,8 +1,10 @@
 import { neon } from "@neondatabase/serverless";
-import { drizzle, type NeonHttpDatabase } from "drizzle-orm/neon-http";
+import { drizzle as drizzleNeon, type NeonHttpDatabase } from "drizzle-orm/neon-http";
+import postgres from "postgres";
+import { drizzle as drizzlePostgres, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "./schema";
 
-type Database = NeonHttpDatabase<typeof schema>;
+type Database = NeonHttpDatabase<typeof schema> | PostgresJsDatabase<typeof schema>;
 
 function getDatabaseUrl(): string {
   const url = process.env.DATABASE_URL;
@@ -14,19 +16,16 @@ function getDatabaseUrl(): string {
   return url;
 }
 
-let _sql: ReturnType<typeof neon> | null = null;
 let _db: Database | null = null;
-
-function getSql() {
-  if (!_sql) {
-    _sql = neon(getDatabaseUrl());
-  }
-  return _sql;
-}
 
 function getDb(): Database {
   if (!_db) {
-    _db = drizzle(getSql(), { schema });
+    const url = getDatabaseUrl();
+    if (url.includes("neon.tech")) {
+      _db = drizzleNeon(neon(url), { schema });
+    } else {
+      _db = drizzlePostgres(postgres(url), { schema });
+    }
   }
   return _db;
 }
