@@ -240,7 +240,7 @@ describe("POST /api/v1/events — single endpoint still works", () => {
     const { getEndpointById } = await import("@/server/db/queries");
     const mockedGetEndpoint = vi.mocked(getEndpointById);
     mockedGetEndpoint.mockResolvedValue({
-      id: "ep-001",
+      id: "55555555-5555-5555-5555-555555555555",
       userId: "user-a",
       url: "https://example.com",
       status: "active",
@@ -256,7 +256,7 @@ describe("POST /api/v1/events — single endpoint still works", () => {
     const { POST } = await import("@/app/api/v1/events/route");
     const res = await POST(
       makeReq({
-        endpointId: "ep-001",
+        endpointId: "55555555-5555-5555-5555-555555555555",
         payload: { test: true },
         eventType: "test.event",
       }),

@@ -10,18 +10,19 @@ import {
 import { sql } from "drizzle-orm";
 import { users } from "./users";
 import { endpoints } from "./endpoints";
+import { endpointGroups } from "./endpoint-groups";
 
 export const endpointSubscriptions = pgTable(
   "endpoint_subscriptions",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    endpointId: uuid("endpoint_id")
-      .references(() => endpoints.id, { onDelete: "cascade" })
-      .notNull(),
+    endpointId: uuid("endpoint_id").references(() => endpoints.id, { onDelete: "cascade" }),
+    endpointGroupId: uuid("endpoint_group_id").references(() => endpointGroups.id, { onDelete: "cascade" }),
     userId: uuid("user_id")
       .references(() => users.id, { onDelete: "cascade" })
       .notNull(),
     eventType: text("event_type").notNull(),
+    deliveryMode: text("delivery_mode").notNull().default("direct"),
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

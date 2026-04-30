@@ -6,7 +6,7 @@ import { enqueueDelivery } from "@/server/queue/producer";
 import { MAX_PAYLOAD_SIZE_BYTES } from "@/lib/constants";
 
 const sendEventSchema = z.object({
-  endpointId: z.string().min(1),
+  endpointId: z.string().uuid(),
   payload: z.record(z.unknown()),
   eventType: z.string().min(1).max(255),
   idempotencyKey: z.string().max(255).optional(),

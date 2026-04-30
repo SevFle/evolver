@@ -48,7 +48,7 @@ describe("POST /api/v1/events authorization", () => {
   it("returns 404 when endpoint belongs to another user", async () => {
     mockedAuth.mockResolvedValue({ userId: "user-a", apiKeyId: "key-1" });
     mockedGetEndpoint.mockResolvedValue({
-      id: "ep-1",
+      id: "11111111-1111-1111-1111-111111111111",
       userId: "user-b",
       url: "https://example.com",
       status: "active",
@@ -57,7 +57,7 @@ describe("POST /api/v1/events authorization", () => {
     const { POST } = await import("@/app/api/v1/events/route");
     const res = await POST(
       makeReq({
-        endpointId: "ep-1",
+        endpointId: "11111111-1111-1111-1111-111111111111",
         payload: { test: true },
         eventType: "test.event",
       }),
@@ -74,7 +74,7 @@ describe("POST /api/v1/events authorization", () => {
     const { POST } = await import("@/app/api/v1/events/route");
     const res = await POST(
       makeReq({
-        endpointId: "ep-missing",
+        endpointId: "22222222-2222-2222-2222-222222222222",
         payload: { test: true },
         eventType: "test.event",
       }),
@@ -85,7 +85,7 @@ describe("POST /api/v1/events authorization", () => {
   it("returns 404 when endpoint is disabled", async () => {
     mockedAuth.mockResolvedValue({ userId: "user-a", apiKeyId: "key-1" });
     mockedGetEndpoint.mockResolvedValue({
-      id: "ep-1",
+      id: "33333333-3333-3333-3333-333333333333",
       userId: "user-a",
       url: "https://example.com",
       status: "disabled",
@@ -94,7 +94,7 @@ describe("POST /api/v1/events authorization", () => {
     const { POST } = await import("@/app/api/v1/events/route");
     const res = await POST(
       makeReq({
-        endpointId: "ep-1",
+        endpointId: "33333333-3333-3333-3333-333333333333",
         payload: { test: true },
         eventType: "test.event",
       }),
@@ -106,7 +106,7 @@ describe("POST /api/v1/events authorization", () => {
   it("returns 202 when authorized and owns the endpoint", async () => {
     mockedAuth.mockResolvedValue({ userId: "user-a", apiKeyId: "key-1" });
     mockedGetEndpoint.mockResolvedValue({
-      id: "ep-1",
+      id: "44444444-4444-4444-4444-444444444444",
       userId: "user-a",
       url: "https://example.com",
       status: "active",
@@ -122,7 +122,7 @@ describe("POST /api/v1/events authorization", () => {
     const { POST } = await import("@/app/api/v1/events/route");
     const res = await POST(
       makeReq({
-        endpointId: "ep-1",
+        endpointId: "44444444-4444-4444-4444-444444444444",
         payload: { test: true },
         eventType: "test.event",
       }),

@@ -103,6 +103,10 @@ export const endpointSubscriptionsRelations = relations(endpointSubscriptions, (
     fields: [endpointSubscriptions.endpointId],
     references: [endpoints.id],
   }),
+  endpointGroup: one(endpointGroups, {
+    fields: [endpointSubscriptions.endpointGroupId],
+    references: [endpointGroups.id],
+  }),
   user: one(users, {
     fields: [endpointSubscriptions.userId],
     references: [users.id],

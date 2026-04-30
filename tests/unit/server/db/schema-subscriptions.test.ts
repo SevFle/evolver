@@ -88,13 +88,17 @@ describe("endpointSubscriptions schema — column definitions", () => {
     expect(source).toContain('uuid("id").primaryKey().defaultRandom()');
   });
 
-  it("endpointId references endpoints.id with cascade delete", () => {
+  it("endpointId references endpoints.id with cascade delete and is intentionally nullable", () => {
     const source = readFileSync(
       "src/server/db/schema/endpoint-subscriptions.ts",
       "utf-8",
     );
-    expect(source).toContain('references(() => endpoints.id, { onDelete: "cascade" })');
-    expect(source).toContain(".notNull()");
+    const endpointIdLine = source
+      .split("\n")
+      .find((l) => l.includes('uuid("endpoint_id")'));
+    expect(endpointIdLine).toBeDefined();
+    expect(endpointIdLine!).toContain('references(() => endpoints.id, { onDelete: "cascade" })');
+    expect(endpointIdLine!).not.toContain(".notNull()");
   });
 
   it("userId references users.id with cascade delete", () => {

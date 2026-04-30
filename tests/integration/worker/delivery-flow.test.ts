@@ -193,6 +193,7 @@ describe("handleDelivery - full delivery flow", () => {
 
   it("returns early when event not found", async () => {
     vi.mocked(getEventById).mockResolvedValue(null);
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await handleDelivery({
       eventId: "evt-missing",
@@ -200,6 +201,7 @@ describe("handleDelivery - full delivery flow", () => {
       attemptNumber: 1,
     });
 
+    consoleErrorSpy.mockRestore();
     expect(deliverWebhook).not.toHaveBeenCalled();
     expect(createDelivery).not.toHaveBeenCalled();
   });
@@ -327,6 +329,8 @@ describe("handleDelivery - full delivery flow", () => {
       statusCode: 500,
     });
     vi.mocked(getConsecutiveFailures).mockResolvedValue(5);
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await handleDelivery({
       eventId: "evt-001",
@@ -334,6 +338,8 @@ describe("handleDelivery - full delivery flow", () => {
       attemptNumber: 1,
     });
 
+    consoleWarnSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
     expect(updateEndpoint).toHaveBeenCalledWith("ep-001", {
       status: "degraded",
     });
@@ -345,6 +351,8 @@ describe("handleDelivery - full delivery flow", () => {
       statusCode: 500,
     });
     vi.mocked(getConsecutiveFailures).mockResolvedValue(5);
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await handleDelivery({
       eventId: "evt-001",
@@ -352,6 +360,8 @@ describe("handleDelivery - full delivery flow", () => {
       attemptNumber: 1,
     });
 
+    consoleWarnSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
     expect(sendFailureAlert).toHaveBeenCalledWith(
       expect.objectContaining({
         endpointId: "ep-001",
@@ -369,6 +379,8 @@ describe("handleDelivery - full delivery flow", () => {
       statusCode: 500,
     });
     vi.mocked(getConsecutiveFailures).mockResolvedValue(6);
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await handleDelivery({
       eventId: "evt-001",
@@ -376,6 +388,8 @@ describe("handleDelivery - full delivery flow", () => {
       attemptNumber: 1,
     });
 
+    consoleWarnSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
     expect(updateEndpoint).toHaveBeenCalledWith("ep-001", {
       status: "degraded",
     });

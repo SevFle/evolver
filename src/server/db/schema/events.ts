@@ -14,6 +14,9 @@ import { endpoints } from "./endpoints";
 import { endpointGroups } from "./endpoint-groups";
 import { eventStatusEnum } from "./enums";
 
+// Migration 0003: events_delivery_mode_check replaced old events_target_check
+// delivery_mode: 'direct' (endpoint_id required), 'group' (endpoint_group_id required), 'fanout' (both null)
+
 export const events = pgTable(
   "events",
   {
@@ -25,6 +28,7 @@ export const events = pgTable(
       .references(() => endpoints.id, { onDelete: "cascade" }),
     endpointGroupId: uuid("endpoint_group_id")
       .references(() => endpointGroups.id, { onDelete: "set null" }),
+    deliveryMode: text("delivery_mode").notNull().default("direct"),
     eventType: text("event_type").notNull(),
     payload: jsonb("payload")
       .$type<Record<string, unknown>>()
