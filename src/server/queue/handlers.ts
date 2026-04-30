@@ -136,14 +136,23 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
 
 async function handleFailedDelivery(
   eventId: string,
-  endpoint: { id: string; userId: string; url: string; name: string },
+  endpoint: {
+    id: string;
+    userId: string;
+    url: string;
+    name: string;
+    retrySchedule?: number[] | null;
+    maxRetries?: number | null;
+  },
   attemptNumber: number,
   isFanout: boolean,
 ): Promise<void> {
   const nextAttempt = attemptNumber + 1;
+  const schedule = endpoint.retrySchedule ?? undefined;
+  const maxRetries = endpoint.maxRetries ?? undefined;
 
-  if (hasRetriesRemaining(nextAttempt)) {
-    const nextRetryAt = getNextRetryAt(attemptNumber);
+  if (hasRetriesRemaining(nextAttempt, maxRetries)) {
+    const nextRetryAt = getNextRetryAt(attemptNumber, schedule);
     const delayMs = nextRetryAt.getTime() - Date.now();
 
     await enqueueDelivery(
