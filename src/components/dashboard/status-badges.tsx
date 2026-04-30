@@ -1,31 +1,48 @@
-export function DeliveryStatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    success: "bg-green-100 text-green-800",
-    failed: "bg-red-100 text-red-800",
-    pending: "bg-yellow-100 text-yellow-800",
-  };
+import { Badge } from "@/components/ui/badge";
 
+const DELIVERY_STATUS_VARIANT: Record<string, "success" | "warning" | "destructive" | "secondary" | "default"> = {
+  success: "success",
+  failed: "destructive",
+  pending: "warning",
+  processing: "secondary",
+  retry_scheduled: "warning",
+  circuit_open: "destructive",
+  dead_letter: "destructive",
+};
+
+export function DeliveryStatusBadge({ status }: { status: string }) {
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${colors[status] ?? "bg-gray-100 text-gray-800"}`}
-    >
-      {status}
-    </span>
+    <Badge variant={DELIVERY_STATUS_VARIANT[status] ?? "secondary"}>
+      {status.replace(/_/g, " ")}
+    </Badge>
   );
 }
 
-export function EndpointStatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    active: "bg-green-100 text-green-800",
-    degraded: "bg-yellow-100 text-yellow-800",
-    disabled: "bg-red-100 text-red-800",
-  };
+const ENDPOINT_STATUS_VARIANT: Record<string, "success" | "warning" | "destructive" | "secondary"> = {
+  active: "success",
+  degraded: "warning",
+  disabled: "destructive",
+};
 
+export function EndpointStatusBadge({ status }: { status: string }) {
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${colors[status] ?? "bg-gray-100 text-gray-800"}`}
-    >
+    <Badge variant={ENDPOINT_STATUS_VARIANT[status] ?? "secondary"}>
       {status}
-    </span>
+    </Badge>
+  );
+}
+
+const EVENT_STATUS_VARIANT: Record<string, "success" | "warning" | "destructive" | "secondary" | "default"> = {
+  queued: "secondary",
+  delivering: "default",
+  delivered: "success",
+  failed: "destructive",
+};
+
+export function EventStatusBadge({ status }: { status: string }) {
+  return (
+    <Badge variant={EVENT_STATUS_VARIANT[status] ?? "secondary"}>
+      {status}
+    </Badge>
   );
 }

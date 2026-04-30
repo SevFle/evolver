@@ -1,4 +1,4 @@
-import { eq, desc, and, isNull, inArray, sql, ne } from "drizzle-orm";
+import { eq, desc, and, isNull, inArray, sql, ne, gte, lte, lt } from "drizzle-orm";
 import { db } from "@/server/db";
 import {
   users,
@@ -261,6 +261,134 @@ export async function getDeliveriesByUserId(userId: string, limit = 50) {
     .where(eq(deliveries.userId, userId))
     .orderBy(desc(deliveries.createdAt))
     .limit(limit);
+}
+
+export type DeliveryFilter = {
+  status?: DeliveryStatus[];
+  endpointId?: string;
+  from?: Date;
+  to?: Date;
+  cursor?: string;
+  limit?: number;
+};
+
+export type DeliveryWithDetails = {
+  id: string;
+  status: DeliveryStatus;
+  attemptNumber: number;
+  responseStatusCode: number | null;
+  errorMessage: string | null;
+  durationMs: number | null;
+  isReplay: boolean;
+  createdAt: Date | null;
+  completedAt: Date | null;
+  nextRetryAt: Date | null;
+  eventId: string;
+  endpointId: string;
+  eventType: string;
+  eventPayload: Record<string, unknown> | null;
+  endpointName: string;
+  endpointUrl: string;
+};
+
+export async function getFilteredDeliveriesByUserId(
+  userId: string,
+  filter: DeliveryFilter = {},
+): Promise<{ items: DeliveryWithDetails[]; nextCursor: string | null }> {
+  const limit = filter.limit ?? 50;
+  const conditions = [eq(deliveries.userId, userId)];
+
+  if (filter.status && filter.status.length > 0) {
+    conditions.push(inArray(deliveries.status, filter.status));
+  }
+  if (filter.endpointId) {
+    conditions.push(eq(deliveries.endpointId, filter.endpointId));
+  }
+  if (filter.from) {
+    conditions.push(gte(deliveries.createdAt, filter.from));
+  }
+  if (filter.to) {
+    conditions.push(lte(deliveries.createdAt, filter.to));
+  }
+  if (filter.cursor) {
+    conditions.push(lt(deliveries.createdAt, new Date(filter.cursor)));
+  }
+
+  const rows = await db
+    .select({
+      id: deliveries.id,
+      status: deliveries.status,
+      attemptNumber: deliveries.attemptNumber,
+      responseStatusCode: deliveries.responseStatusCode,
+      errorMessage: deliveries.errorMessage,
+      durationMs: deliveries.durationMs,
+      isReplay: deliveries.isReplay,
+      createdAt: deliveries.createdAt,
+      completedAt: deliveries.completedAt,
+      nextRetryAt: deliveries.nextRetryAt,
+      eventId: deliveries.eventId,
+      endpointId: deliveries.endpointId,
+      eventType: events.eventType,
+      eventPayload: events.payload,
+      endpointName: endpoints.name,
+      endpointUrl: endpoints.url,
+    })
+    .from(deliveries)
+    .innerJoin(events, eq(deliveries.eventId, events.id))
+    .innerJoin(endpoints, eq(deliveries.endpointId, endpoints.id))
+    .where(and(...conditions))
+    .orderBy(desc(deliveries.createdAt))
+    .limit(limit + 1);
+
+  const hasMore = rows.length > limit;
+  const items = hasMore ? rows.slice(0, limit) : rows;
+  const nextCursor = hasMore && items[items.length - 1]?.createdAt
+    ? items[items.length - 1]!.createdAt!.toISOString()
+    : null;
+
+  return { items, nextCursor };
+}
+
+export type DeliveryDetail = DeliveryWithDetails & {
+  requestHeaders: Record<string, string> | null;
+  responseHeaders: Record<string, string> | null;
+  responseBody: string | null;
+  maxAttempts: number;
+};
+
+export async function getDeliveryById(
+  deliveryId: string,
+  userId: string,
+): Promise<DeliveryDetail | null> {
+  const [row] = await db
+    .select({
+      id: deliveries.id,
+      status: deliveries.status,
+      attemptNumber: deliveries.attemptNumber,
+      maxAttempts: deliveries.maxAttempts,
+      responseStatusCode: deliveries.responseStatusCode,
+      responseHeaders: deliveries.responseHeaders,
+      responseBody: deliveries.responseBody,
+      requestHeaders: deliveries.requestHeaders,
+      errorMessage: deliveries.errorMessage,
+      durationMs: deliveries.durationMs,
+      isReplay: deliveries.isReplay,
+      createdAt: deliveries.createdAt,
+      completedAt: deliveries.completedAt,
+      nextRetryAt: deliveries.nextRetryAt,
+      eventId: deliveries.eventId,
+      endpointId: deliveries.endpointId,
+      eventType: events.eventType,
+      eventPayload: events.payload,
+      endpointName: endpoints.name,
+      endpointUrl: endpoints.url,
+    })
+    .from(deliveries)
+    .innerJoin(events, eq(deliveries.eventId, events.id))
+    .innerJoin(endpoints, eq(deliveries.endpointId, endpoints.id))
+    .where(and(eq(deliveries.id, deliveryId), eq(deliveries.userId, userId)));
+
+  return row ?? null;
 }
 
 export async function getSuccessfulDelivery(
