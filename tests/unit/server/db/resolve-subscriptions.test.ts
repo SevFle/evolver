@@ -6,10 +6,10 @@ const {
   mockSelect,
   mockActiveEndpoints,
 } = vi.hoisted(() => {
-  const mockSelectWhere = vi.fn(() => []);
+  const mockSelectWhere = vi.fn<() => unknown[]>(() => []);
   const mockSelectFrom = vi.fn(() => ({ where: mockSelectWhere }));
   const mockSelect = vi.fn(() => ({ from: mockSelectFrom }));
-  const mockActiveEndpoints = vi.fn(() => []);
+  const mockActiveEndpoints = vi.fn<(ids: string[]) => unknown[]>(() => []);
   return { mockSelectFrom, mockSelectWhere, mockSelect, mockActiveEndpoints };
 });
 
@@ -200,7 +200,7 @@ describe("resolveSubscribedEndpoints — glob wildcard behavior", () => {
       "order.created",
     );
     expect(result).toHaveLength(1);
-    expect(result[0].id).toBe("ep-1");
+    expect(result[0]!.id).toBe("ep-1");
   });
 
   it("does not match different eventType without wildcard", async () => {
@@ -524,7 +524,7 @@ describe("getSubscriptionsByUserId — isActive behavioral filtering", () => {
 
     const result = await getSubscriptionsByUserId("user-1");
     expect(result).toHaveLength(1);
-    expect(result[0].isActive).toBe(true);
+    expect(result[0]!.isActive).toBe(true);
   });
 
   it("returns empty when all subscriptions are inactive", async () => {
@@ -556,8 +556,8 @@ describe("getSubscriptionsByEndpointId — isActive behavioral filtering", () =>
 
     const result = await getSubscriptionsByEndpointId("ep-1", "user-1");
     expect(result).toHaveLength(1);
-    expect(result[0].isActive).toBe(true);
-    expect(result[0].endpointId).toBe("ep-1");
+    expect(result[0]!.isActive).toBe(true);
+    expect(result[0]!.endpointId).toBe("ep-1");
   });
 
   it("returns empty when no active subscriptions exist for endpoint", async () => {

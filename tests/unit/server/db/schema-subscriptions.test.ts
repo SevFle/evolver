@@ -3,13 +3,15 @@ import { endpointSubscriptions } from "@/server/db/schema/endpoint-subscriptions
 import { readFileSync } from "fs";
 
 describe("endpointSubscriptions schema — uniqueIndex on (endpointId, eventType)", () => {
-  it("defines endpointEventTypeUnique as uniqueIndex on endpointId + eventType", () => {
+  it("defines three partial unique indexes for each delivery mode", () => {
     const source = readFileSync(
       "src/server/db/schema/endpoint-subscriptions.ts",
       "utf-8",
     );
     expect(source).toContain("uniqueIndex");
-    expect(source).toContain("endpoint_subscriptions_endpoint_event_type_uniq");
+    expect(source).toContain("endpoint_subscriptions_direct_event_type_uniq");
+    expect(source).toContain("endpoint_subscriptions_group_event_type_uniq");
+    expect(source).toContain("endpoint_subscriptions_fanout_event_type_uniq");
     expect(source).toContain("table.endpointId");
     expect(source).toContain("table.eventType");
   });
@@ -60,21 +62,29 @@ describe("endpointSubscriptions schema — uniqueIndex on (endpointId, eventType
     expect(uniqueIdxPos).toBeGreaterThan(regularIdxPos);
   });
 
-  it("uniqueIndex name follows convention endpoint_subscriptions_endpoint_event_type_uniq", () => {
+  it("partial unique index names follow convention endpoint_subscriptions_{mode}_event_type_uniq", () => {
     const source = readFileSync(
       "src/server/db/schema/endpoint-subscriptions.ts",
       "utf-8",
     );
-    expect(source).toMatch(/uniqueIndex\([\s\S]*?endpoint_subscriptions_endpoint_event_type_uniq[\s\S]*?\)/);
+    expect(source).toMatch(/uniqueIndex\([\s\S]*?endpoint_subscriptions_direct_event_type_uniq[\s\S]*?\)/);
+    expect(source).toMatch(/uniqueIndex\([\s\S]*?endpoint_subscriptions_group_event_type_uniq[\s\S]*?\)/);
+    expect(source).toMatch(/uniqueIndex\([\s\S]*?endpoint_subscriptions_fanout_event_type_uniq[\s\S]*?\)/);
   });
 
-  it("uniqueIndex covers both endpointId and eventType in .on()", () => {
+  it("direct partial uniqueIndex covers endpointId + eventType, group covers endpointGroupId + eventType, fanout covers userId + eventType", () => {
     const source = readFileSync(
       "src/server/db/schema/endpoint-subscriptions.ts",
       "utf-8",
     );
     expect(source).toMatch(
-      /\.on\([\s\S]*?table\.endpointId[\s\S]*?table\.eventType[\s\S]*?\)/,
+      /directEventTypeUnique[\s\S]*?\.on\([\s\S]*?table\.endpointId[\s\S]*?table\.eventType/s,
+    );
+    expect(source).toMatch(
+      /groupEventTypeUnique[\s\S]*?\.on\([\s\S]*?table\.endpointGroupId[\s\S]*?table\.eventType/s,
+    );
+    expect(source).toMatch(
+      /fanoutEventTypeUnique[\s\S]*?\.on\([\s\S]*?table\.userId[\s\S]*?table\.eventType/s,
     );
   });
 });

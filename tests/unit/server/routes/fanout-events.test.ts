@@ -201,6 +201,24 @@ describe("POST /api/v1/events — fan-out via endpointGroupId", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 400 when both endpointGroupId and endpointIds are provided (XOR required)", async () => {
+    mockedAuth.mockResolvedValue({ userId: "user-a", apiKeyId: "key-1" });
+
+    const { POST } = await import("@/app/api/v1/events/route");
+    const res = await POST(
+      makeReq({
+        endpointGroupId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1",
+        endpointIds: ["aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1"],
+        payload: {},
+        eventType: "test.event",
+      }),
+    );
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Validation failed");
+  });
+
   it("passes idempotencyKey through for fan-out events", async () => {
     mockedAuth.mockResolvedValue({ userId: "user-a", apiKeyId: "key-1" });
     mockedResolveFanout.mockResolvedValue(fanoutEndpoints as never);

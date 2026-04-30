@@ -6,6 +6,7 @@ import {
   boolean,
   index,
   uniqueIndex,
+  check,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { users } from "./users";
@@ -22,7 +23,7 @@ export const endpointSubscriptions = pgTable(
       .references(() => users.id, { onDelete: "cascade" })
       .notNull(),
     eventType: text("event_type").notNull(),
-    deliveryMode: text("delivery_mode").notNull().default("direct"),
+    deliveryMode: text("delivery_mode").notNull().default("direct").$type<"direct" | "group" | "fanout">(),
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -42,9 +43,31 @@ export const endpointSubscriptions = pgTable(
     activeUserIdx: index("endpoint_subscriptions_active_user_idx")
       .on(table.userId, table.isActive)
       .where(sql`${table.isActive} = true`),
-    endpointEventTypeUnique: uniqueIndex(
-      "endpoint_subscriptions_endpoint_event_type_uniq",
+    directEventTypeUnique: uniqueIndex(
+      "endpoint_subscriptions_direct_event_type_uniq",
     )
-      .on(table.endpointId, table.eventType),
+      .on(table.endpointId, table.eventType)
+      .where(sql`${table.endpointId} IS NOT NULL`),
+    groupEventTypeUnique: uniqueIndex(
+      "endpoint_subscriptions_group_event_type_uniq",
+    )
+      .on(table.endpointGroupId, table.eventType)
+      .where(sql`${table.endpointGroupId} IS NOT NULL`),
+    fanoutEventTypeUnique: uniqueIndex(
+      "endpoint_subscriptions_fanout_event_type_uniq",
+    )
+      .on(table.userId, table.eventType)
+      .where(
+        sql`${table.endpointId} IS NULL AND ${table.endpointGroupId} IS NULL`,
+      ),
+    deliveryModeCheck: check(
+      "endpoint_subscriptions_delivery_mode_check",
+      sql`CASE
+        WHEN ${table.deliveryMode} = 'direct' THEN ${table.endpointId} IS NOT NULL AND ${table.endpointGroupId} IS NULL
+        WHEN ${table.deliveryMode} = 'group' THEN ${table.endpointGroupId} IS NOT NULL AND ${table.endpointId} IS NULL
+        WHEN ${table.deliveryMode} = 'fanout' THEN ${table.endpointId} IS NULL AND ${table.endpointGroupId} IS NULL
+        ELSE false
+      END`,
+    ),
   }),
 );

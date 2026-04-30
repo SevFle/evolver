@@ -123,9 +123,11 @@ describe("migration 0002 — consistency with schema definition", () => {
     expect(schemaSource).toContain('"endpoint_subscriptions"');
   });
 
-  it("schema and migration agree on unique index name", () => {
+  it("migration 0002 creates the old unique index name, schema uses three partial indexes (replaced by 0003)", () => {
     expect(migration).toContain("endpoint_subscriptions_endpoint_event_type_uniq");
-    expect(schemaSource).toContain("endpoint_subscriptions_endpoint_event_type_uniq");
+    expect(schemaSource).toContain("endpoint_subscriptions_direct_event_type_uniq");
+    expect(schemaSource).toContain("endpoint_subscriptions_group_event_type_uniq");
+    expect(schemaSource).toContain("endpoint_subscriptions_fanout_event_type_uniq");
   });
 
   it("schema and migration agree on composite index name", () => {

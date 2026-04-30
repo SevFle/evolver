@@ -23,8 +23,8 @@ const sendFanoutEventSchema = z.object({
   metadata: z.record(z.unknown()).optional(),
   source: z.string().max(255).optional(),
 }).refine(
-  (data) => data.endpointGroupId || data.endpointIds,
-  "Must provide endpointGroupId or endpointIds",
+  (data) => (data.endpointGroupId && !data.endpointIds) || (!data.endpointGroupId && data.endpointIds),
+  "Must provide exactly one of endpointGroupId or endpointIds",
 );
 
 const sendSubscriptionEventSchema = z.object({

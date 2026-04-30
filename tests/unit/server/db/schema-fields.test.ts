@@ -82,6 +82,26 @@ describe("enum values", () => {
   });
 });
 
+describe("delivery_mode type safety", () => {
+  it("events schema deliveryMode uses $type for strict typing", async () => {
+    const source = await import("fs").then((fs) =>
+      fs.promises.readFile("src/server/db/schema/events.ts", "utf-8"),
+    );
+    expect(source).toMatch(
+      /\$type<["']direct["']\s*\|\s*["']group["']\s*\|\s*["']fanout["']>/,
+    );
+  });
+
+  it("endpoint-subscriptions schema deliveryMode uses $type for strict typing", async () => {
+    const source = await import("fs").then((fs) =>
+      fs.promises.readFile("src/server/db/schema/endpoint-subscriptions.ts", "utf-8"),
+    );
+    expect(source).toMatch(
+      /\$type<["']direct["']\s*\|\s*["']group["']\s*\|\s*["']fanout["']>/,
+    );
+  });
+});
+
 describe("drizzle config", () => {
   it("references DATABASE_URL_NON_POOLING", async () => {
     const configText = await import("fs").then((fs) =>

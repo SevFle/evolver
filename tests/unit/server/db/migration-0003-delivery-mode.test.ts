@@ -10,9 +10,9 @@ describe("migration 0003 — endpoint_subscriptions delivery_mode column", () =>
     );
   });
 
-  it("adds endpoint_group_id column as nullable uuid", () => {
+  it("adds endpoint_group_id column as nullable uuid with IF NOT EXISTS", () => {
     expect(migration).toContain(
-      'ALTER TABLE "endpoint_subscriptions" ADD COLUMN "endpoint_group_id" uuid',
+      'ALTER TABLE "endpoint_subscriptions" ADD COLUMN IF NOT EXISTS "endpoint_group_id" uuid',
     );
   });
 
@@ -22,9 +22,9 @@ describe("migration 0003 — endpoint_subscriptions delivery_mode column", () =>
     );
   });
 
-  it("adds delivery_mode column as NOT NULL DEFAULT 'direct'", () => {
+  it("adds delivery_mode column as NOT NULL DEFAULT 'direct' with IF NOT EXISTS", () => {
     expect(migration).toContain(
-      'ALTER TABLE "endpoint_subscriptions" ADD COLUMN "delivery_mode" text NOT NULL DEFAULT \'direct\'',
+      'ALTER TABLE "endpoint_subscriptions" ADD COLUMN IF NOT EXISTS "delivery_mode" text NOT NULL DEFAULT \'direct\'',
     );
   });
 
@@ -48,8 +48,16 @@ describe("migration 0003 — endpoint_subscriptions delivery_mode CHECK logic", 
     expect(checkBlock).toMatch(/WHEN.*delivery_mode.*=.*'direct'.*THEN.*endpoint_id.*IS NOT NULL/s);
   });
 
+  it("requires endpoint_group_id IS NULL when delivery_mode is 'direct'", () => {
+    expect(checkBlock).toMatch(/WHEN.*delivery_mode.*=.*'direct'.*THEN.*endpoint_id.*IS NOT NULL.*endpoint_group_id.*IS NULL/s);
+  });
+
   it("requires endpoint_group_id when delivery_mode is 'group'", () => {
     expect(checkBlock).toMatch(/WHEN.*delivery_mode.*=.*'group'.*THEN.*endpoint_group_id.*IS NOT NULL/s);
+  });
+
+  it("requires endpoint_id IS NULL when delivery_mode is 'group'", () => {
+    expect(checkBlock).toMatch(/WHEN.*delivery_mode.*=.*'group'.*THEN.*endpoint_group_id.*IS NOT NULL.*endpoint_id.*IS NULL/s);
   });
 
   it("requires both null when delivery_mode is 'fanout'", () => {
@@ -67,9 +75,9 @@ describe("migration 0003 — endpoint_subscriptions delivery_mode CHECK logic", 
 });
 
 describe("migration 0003 — events delivery_mode column", () => {
-  it("adds delivery_mode column as nullable text initially", () => {
+  it("adds delivery_mode column as nullable text initially with IF NOT EXISTS", () => {
     expect(migration).toContain(
-      'ALTER TABLE "events" ADD COLUMN "delivery_mode" text',
+      'ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "delivery_mode" text',
     );
   });
 
@@ -109,8 +117,16 @@ describe("migration 0003 — events delivery_mode CHECK logic", () => {
     expect(checkBlock).toMatch(/WHEN.*delivery_mode.*=.*'direct'.*THEN.*endpoint_id.*IS NOT NULL/s);
   });
 
+  it("requires endpoint_group_id IS NULL when delivery_mode is 'direct'", () => {
+    expect(checkBlock).toMatch(/WHEN.*delivery_mode.*=.*'direct'.*THEN.*endpoint_id.*IS NOT NULL.*endpoint_group_id.*IS NULL/s);
+  });
+
   it("requires endpoint_group_id when delivery_mode is 'group'", () => {
     expect(checkBlock).toMatch(/WHEN.*delivery_mode.*=.*'group'.*THEN.*endpoint_group_id.*IS NOT NULL/s);
+  });
+
+  it("requires endpoint_id IS NULL when delivery_mode is 'group'", () => {
+    expect(checkBlock).toMatch(/WHEN.*delivery_mode.*=.*'group'.*THEN.*endpoint_group_id.*IS NOT NULL.*endpoint_id.*IS NULL/s);
   });
 
   it("requires both null when delivery_mode is 'fanout'", () => {
@@ -152,6 +168,41 @@ describe("migration 0003 — statement breakpoints", () => {
   });
 });
 
+describe("migration 0003 — transaction safety", () => {
+  it("wraps all statements in BEGIN...COMMIT", () => {
+    expect(migration.trim().startsWith("BEGIN;")).toBe(true);
+    expect(migration.trim().endsWith("COMMIT;")).toBe(true);
+  });
+
+  it("places corruption check before any DDL changes", () => {
+    const corruptionPos = migration.indexOf("Data corruption detected");
+    const firstAlterTable = migration.indexOf("ALTER TABLE");
+    expect(corruptionPos).toBeGreaterThan(-1);
+    expect(firstAlterTable).toBeGreaterThan(-1);
+    expect(corruptionPos).toBeLessThan(firstAlterTable);
+  });
+
+  it("corruption check runs before delivery_mode column is added to events", () => {
+    const corruptionPos = migration.indexOf("Data corruption detected");
+    const addDeliveryModePos = migration.indexOf(
+      'ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "delivery_mode" text',
+    );
+    expect(corruptionPos).toBeLessThan(addDeliveryModePos);
+  });
+
+  it("BEGIN appears before corruption check", () => {
+    const beginPos = migration.indexOf("BEGIN;");
+    const corruptionPos = migration.indexOf("Data corruption detected");
+    expect(beginPos).toBeLessThan(corruptionPos);
+  });
+
+  it("COMMIT appears after all DDL and DML statements", () => {
+    const commitPos = migration.lastIndexOf("COMMIT;");
+    const lastTriggerPos = migration.indexOf("EXECUTE FUNCTION");
+    expect(commitPos).toBeGreaterThan(lastTriggerPos);
+  });
+});
+
 describe("migration 0003 — CHECK constraints are symmetric between tables", () => {
   it("both tables define identical delivery_mode values: direct, group, fanout", () => {
     const subsCheck = migration.match(
@@ -166,6 +217,36 @@ describe("migration 0003 — CHECK constraints are symmetric between tables", ()
       expect(subsCheck).toContain(`'${mode}'`);
       expect(eventsCheck).toContain(`'${mode}'`);
     }
+  });
+
+  it("direct mode requires endpoint_group_id IS NULL in both tables", () => {
+    const subsCheck = migration.match(
+      /endpoint_subscriptions_delivery_mode_check[\s\S]*?END/
+    )?.[0] ?? "";
+    const eventsCheck = migration.match(
+      /events_delivery_mode_check[\s\S]*?END/
+    )?.[0] ?? "";
+
+    const directSubs = subsCheck.match(/WHEN.*'direct'.*THEN.*(?=\n|\s)/s)?.[0] ?? "";
+    const directEvents = eventsCheck.match(/WHEN.*'direct'.*THEN.*(?=\n|\s)/s)?.[0] ?? "";
+
+    expect(directSubs).toContain("endpoint_group_id IS NULL");
+    expect(directEvents).toContain("endpoint_group_id IS NULL");
+  });
+
+  it("group mode requires endpoint_id IS NULL in both tables", () => {
+    const subsCheck = migration.match(
+      /endpoint_subscriptions_delivery_mode_check[\s\S]*?END/
+    )?.[0] ?? "";
+    const eventsCheck = migration.match(
+      /events_delivery_mode_check[\s\S]*?END/
+    )?.[0] ?? "";
+
+    const groupSubs = subsCheck.match(/WHEN.*'group'.*THEN.*(?=\n|\s)/s)?.[0] ?? "";
+    const groupEvents = eventsCheck.match(/WHEN.*'group'.*THEN.*(?=\n|\s)/s)?.[0] ?? "";
+
+    expect(groupSubs).toContain("endpoint_id IS NULL");
+    expect(groupEvents).toContain("endpoint_id IS NULL");
   });
 });
 

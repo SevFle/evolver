@@ -741,8 +741,8 @@
           "method": "btree",
           "with": {}
         },
-        "endpoint_subscriptions_endpoint_event_type_uniq": {
-          "name": "endpoint_subscriptions_endpoint_event_type_uniq",
+        "endpoint_subscriptions_direct_event_type_uniq": {
+          "name": "endpoint_subscriptions_direct_event_type_uniq",
           "columns": [
             {
               "expression": "endpoint_id",
@@ -758,6 +758,51 @@
             }
           ],
           "isUnique": true,
+          "where": "\"endpoint_subscriptions\".\"endpoint_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "endpoint_subscriptions_group_event_type_uniq": {
+          "name": "endpoint_subscriptions_group_event_type_uniq",
+          "columns": [
+            {
+              "expression": "endpoint_group_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "event_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"endpoint_subscriptions\".\"endpoint_group_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "endpoint_subscriptions_fanout_event_type_uniq": {
+          "name": "endpoint_subscriptions_fanout_event_type_uniq",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "event_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"endpoint_subscriptions\".\"endpoint_id\" IS NULL AND \"endpoint_subscriptions\".\"endpoint_group_id\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -810,7 +855,7 @@
       "checkConstraints": {
         "endpoint_subscriptions_delivery_mode_check": {
           "name": "endpoint_subscriptions_delivery_mode_check",
-          "value": "CASE WHEN delivery_mode = 'direct' THEN endpoint_id IS NOT NULL WHEN delivery_mode = 'group' THEN endpoint_group_id IS NOT NULL WHEN delivery_mode = 'fanout' THEN endpoint_id IS NULL AND endpoint_group_id IS NULL ELSE false END"
+          "value": "CASE WHEN delivery_mode = 'direct' THEN endpoint_id IS NOT NULL AND endpoint_group_id IS NULL WHEN delivery_mode = 'group' THEN endpoint_group_id IS NOT NULL AND endpoint_id IS NULL WHEN delivery_mode = 'fanout' THEN endpoint_id IS NULL AND endpoint_group_id IS NULL ELSE false END"
         }
       },
       "isRLSEnabled": false
@@ -1229,7 +1274,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
+          "onDelete": "restrict",
           "onUpdate": "no action"
         },
         "events_replayed_from_event_id_events_id_fk": {
@@ -1252,7 +1297,7 @@
       "checkConstraints": {
         "events_delivery_mode_check": {
           "name": "events_delivery_mode_check",
-          "value": "CASE WHEN delivery_mode = 'direct' THEN endpoint_id IS NOT NULL WHEN delivery_mode = 'group' THEN endpoint_group_id IS NOT NULL WHEN delivery_mode = 'fanout' THEN endpoint_id IS NULL AND endpoint_group_id IS NULL ELSE false END"
+          "value": "CASE WHEN delivery_mode = 'direct' THEN endpoint_id IS NOT NULL AND endpoint_group_id IS NULL WHEN delivery_mode = 'group' THEN endpoint_group_id IS NOT NULL AND endpoint_id IS NULL WHEN delivery_mode = 'fanout' THEN endpoint_id IS NULL AND endpoint_group_id IS NULL ELSE false END"
         }
       },
       "isRLSEnabled": false

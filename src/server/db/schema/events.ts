@@ -6,6 +6,7 @@ import {
   jsonb,
   index,
   uniqueIndex,
+  check,
 } from "drizzle-orm/pg-core";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -27,8 +28,8 @@ export const events = pgTable(
     endpointId: uuid("endpoint_id")
       .references(() => endpoints.id, { onDelete: "cascade" }),
     endpointGroupId: uuid("endpoint_group_id")
-      .references(() => endpointGroups.id, { onDelete: "set null" }),
-    deliveryMode: text("delivery_mode").notNull().default("direct"),
+      .references(() => endpointGroups.id, { onDelete: "restrict" }),
+    deliveryMode: text("delivery_mode").notNull().default("direct").$type<"direct" | "group" | "fanout">(),
     eventType: text("event_type").notNull(),
     payload: jsonb("payload")
       .$type<Record<string, unknown>>()
@@ -63,6 +64,15 @@ export const events = pgTable(
     ),
     replayedFromIdx: index("events_replayed_from_idx").on(
       table.replayedFromEventId,
+    ),
+    deliveryModeCheck: check(
+      "events_delivery_mode_check",
+      sql`CASE
+        WHEN ${table.deliveryMode} = 'direct' THEN ${table.endpointId} IS NOT NULL AND ${table.endpointGroupId} IS NULL
+        WHEN ${table.deliveryMode} = 'group' THEN ${table.endpointGroupId} IS NOT NULL AND ${table.endpointId} IS NULL
+        WHEN ${table.deliveryMode} = 'fanout' THEN ${table.endpointId} IS NULL AND ${table.endpointGroupId} IS NULL
+        ELSE false
+      END`,
     ),
   }),
 );

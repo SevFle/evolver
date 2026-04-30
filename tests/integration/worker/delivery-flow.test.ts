@@ -78,6 +78,7 @@ const mockEvent = {
   userId: "user-001",
   endpointId: "ep-001",
   endpointGroupId: null,
+  deliveryMode: "direct" as const,
   eventType: "test.event",
   payload: { hello: "world" },
   metadata: {},

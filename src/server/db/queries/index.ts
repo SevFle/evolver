@@ -846,7 +846,7 @@ export async function getSubscribedEndpointsForEventType(
 
   if (subs.length === 0) return [];
 
-  const ids = subs.map((s) => s.endpointId);
+  const ids = subs.map((s) => s.endpointId).filter((id): id is string => id !== null);
   return getActiveEndpointsByIds(ids, userId);
 }
 
@@ -869,7 +869,7 @@ export async function resolveSubscribedEndpoints(
 
   const matchingEndpointIds = new Set<string>();
   for (const sub of allSubs) {
-    if (globMatch(sub.eventType, eventType)) {
+    if (globMatch(sub.eventType, eventType) && sub.endpointId !== null) {
       matchingEndpointIds.add(sub.endpointId);
     }
   }

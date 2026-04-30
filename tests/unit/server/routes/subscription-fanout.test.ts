@@ -9,13 +9,13 @@ const {
   mockInsert,
   mockActiveEndpoints,
 } = vi.hoisted(() => {
-  const mockSelectWhere = vi.fn(() => []);
+  const mockSelectWhere = vi.fn<() => unknown[]>(() => []);
   const mockSelectFrom = vi.fn(() => ({ where: mockSelectWhere }));
   const mockSelect = vi.fn(() => ({ from: mockSelectFrom }));
-  const mockInsertReturning = vi.fn(() => []);
+  const mockInsertReturning = vi.fn<() => unknown[]>(() => []);
   const mockInsertValues = vi.fn(() => ({ returning: mockInsertReturning }));
   const mockInsert = vi.fn(() => ({ values: mockInsertValues }));
-  const mockActiveEndpoints = vi.fn(() => []);
+  const mockActiveEndpoints = vi.fn<(ids: string[]) => unknown[]>(() => []);
   return {
     mockSelectFrom,
     mockSelectWhere,
@@ -118,7 +118,7 @@ describe("ingestSubscription flow — createEvent with allowNoTarget", () => {
       allowNoTarget: true,
     });
     expect(event).toBeDefined();
-    expect(event.id).toBe("evt-sub-1");
+    expect(event!.id).toBe("evt-sub-1");
   });
 
   it("createEvent rejects without allowNoTarget when no endpointId/groupId", async () => {
@@ -168,7 +168,7 @@ describe("ingestSubscription flow — createEvent with allowNoTarget", () => {
 
     for (const ep of subscribedEndpoints) {
       await enqueueDelivery({
-        eventId: event.id,
+        eventId: event!.id,
         endpointId: ep.id,
         attemptNumber: 1,
       });
@@ -214,7 +214,7 @@ describe("ingestSubscription flow — createEvent with allowNoTarget", () => {
       "order.created",
     );
     expect(subscribedEndpoints).toHaveLength(1);
-    expect(subscribedEndpoints[0].id).toBe("ep-1");
+    expect(subscribedEndpoints[0]!.id).toBe("ep-1");
   });
 });
 

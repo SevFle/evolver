@@ -19,12 +19,12 @@ describe("unique constraint — schema definition", () => {
     expect(schemaSource).toContain("uniqueIndex");
   });
 
-  it("defines endpointEventTypeUnique as a uniqueIndex", () => {
-    expect(schemaSource).toContain("endpointEventTypeUnique: uniqueIndex");
+  it("defines directEventTypeUnique as a uniqueIndex", () => {
+    expect(schemaSource).toContain("directEventTypeUnique: uniqueIndex");
   });
 
-  it("uniqueIndex name is endpoint_subscriptions_endpoint_event_type_uniq", () => {
-    expect(schemaSource).toContain('"endpoint_subscriptions_endpoint_event_type_uniq"');
+  it("direct uniqueIndex name is endpoint_subscriptions_direct_event_type_uniq", () => {
+    expect(schemaSource).toContain('"endpoint_subscriptions_direct_event_type_uniq"');
   });
 
   it("uniqueIndex is on (endpointId, eventType) columns", () => {
@@ -42,7 +42,7 @@ describe("unique constraint — schema definition", () => {
     const callbackEnd = schemaSource.indexOf("});", callbackStart);
     const callback = schemaSource.slice(callbackStart, callbackEnd);
     expect(callback).toContain("uniqueIndex(");
-    expect(callback).toContain("endpointEventTypeUnique");
+    expect(callback).toContain("directEventTypeUnique");
   });
 
   it("no other unique constraint exists on the table besides this index", () => {

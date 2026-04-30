@@ -25,7 +25,10 @@ export const endpointStatusEnum = pgEnum("endpoint_status", [
 
 export const userRoleEnum = pgEnum("user_role", ["owner", "admin", "member"]);
 
+export const DELIVERY_MODES = ["direct", "group", "fanout"] as const;
+
 export type DeliveryStatus = (typeof deliveryStatusEnum.enumValues)[number];
 export type EventStatus = (typeof eventStatusEnum.enumValues)[number];
 export type EndpointStatus = (typeof endpointStatusEnum.enumValues)[number];
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
+export type DeliveryMode = (typeof DELIVERY_MODES)[number];

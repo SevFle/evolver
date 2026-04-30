@@ -32,12 +32,14 @@ export {
   eventStatusEnum,
   endpointStatusEnum,
   userRoleEnum,
+  DELIVERY_MODES,
 } from "./enums";
 export type {
   DeliveryStatus,
   EventStatus,
   EndpointStatus,
   UserRole,
+  DeliveryMode,
 } from "./enums";
 
 export type User = typeof users.$inferSelect;

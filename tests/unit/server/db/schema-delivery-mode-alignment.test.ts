@@ -106,9 +106,9 @@ describe("events — endpointGroupId is nullable", () => {
     }
   });
 
-  it("endpointGroupId references endpointGroups.id with set null", () => {
+  it("endpointGroupId references endpointGroups.id with restrict", () => {
     expect(eventsSource).toContain(
-      'references(() => endpointGroups.id, { onDelete: "set null" })',
+      'references(() => endpointGroups.id, { onDelete: "restrict" })',
     );
   });
 });
@@ -168,15 +168,19 @@ describe("schema alignment — both tables define deliveryMode identically", () 
   });
 });
 
-describe("schema alignment — CHECK constraints are SQL-only (Drizzle limitation)", () => {
-  it("endpoint-subscriptions.ts does not define CHECK in Drizzle schema", () => {
-    expect(subsSource).not.toContain("check(");
-    expect(subsSource).not.toContain(".check(");
+describe("schema alignment — CHECK constraints defined in both Drizzle schema and migration SQL", () => {
+  it("endpoint-subscriptions.ts defines CHECK in Drizzle schema with mutual exclusivity", () => {
+    expect(subsSource).toContain("check(");
+    expect(subsSource).toContain("endpoint_subscriptions_delivery_mode_check");
+    expect(subsSource).toMatch(/deliveryMode.*=.*'direct'.*endpointId.*IS NOT NULL.*endpointGroupId.*IS NULL/s);
+    expect(subsSource).toMatch(/deliveryMode.*=.*'group'.*endpointGroupId.*IS NOT NULL.*endpointId.*IS NULL/s);
   });
 
-  it("events.ts does not define CHECK in Drizzle schema", () => {
-    expect(eventsSource).not.toContain("check(");
-    expect(eventsSource).not.toContain(".check(");
+  it("events.ts defines CHECK in Drizzle schema with mutual exclusivity", () => {
+    expect(eventsSource).toContain("check(");
+    expect(eventsSource).toContain("events_delivery_mode_check");
+    expect(eventsSource).toMatch(/deliveryMode.*=.*'direct'.*endpointId.*IS NOT NULL.*endpointGroupId.*IS NULL/s);
+    expect(eventsSource).toMatch(/deliveryMode.*=.*'group'.*endpointGroupId.*IS NOT NULL.*endpointId.*IS NULL/s);
   });
 
   it("the CHECK constraints exist in migration 0003 SQL", () => {
