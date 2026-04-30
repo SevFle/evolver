@@ -168,6 +168,9 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
       }
       await resetAlertStateOnSuccess(endpoint.id, endpoint.status);
     } else {
+      if (!delivery) {
+        throw new Error("Failed to create delivery record");
+      }
       await handleFailedDelivery(
         event.id,
         endpoint,
@@ -175,7 +178,7 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
         isFanout,
         isReplay,
         recoveryProbe,
-        delivery!.id,
+        delivery.id,
       );
     }
   } catch (error) {
@@ -199,6 +202,9 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
       isReplay,
     });
 
+    if (!delivery) {
+      throw new Error("Failed to create delivery record");
+    }
     await handleFailedDelivery(
       event.id,
       endpoint,
@@ -206,7 +212,7 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
       isFanout,
       isReplay,
       recoveryProbe,
-      delivery!.id,
+      delivery.id,
     );
   }
 }
@@ -225,7 +231,7 @@ async function handleFailedDelivery(
   isFanout: boolean,
   isReplay: boolean,
   isRecoveryProbe: boolean,
-  deliveryId?: string,
+  deliveryId: string,
 ): Promise<void> {
   if (isRecoveryProbe) {
     console.log(
@@ -258,9 +264,7 @@ async function handleFailedDelivery(
       Math.max(delayMs, 0),
     );
   } else {
-    if (deliveryId) {
-      await updateDeliveryStatus(deliveryId, "dead_letter", `Max retries (${attemptNumber}) exhausted`);
-    }
+    await updateDeliveryStatus(deliveryId, "dead_letter", `Max retries (${attemptNumber}) exhausted`);
     await enqueueDeadLetter(
       { eventId, endpointId: endpoint.id, attemptNumber },
       `Max retries (${attemptNumber}) exhausted`,

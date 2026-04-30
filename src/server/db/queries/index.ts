@@ -567,10 +567,29 @@ export async function atomicCircuitOpenCountAndCreate(data: {
         errorMessage: "Circuit breaker open - endpoint is degraded",
         isReplay: data.isReplay,
       })
+      .onConflictDoNothing({
+        target: [deliveries.eventId, deliveries.endpointId],
+        where: eq(deliveries.status, "circuit_open"),
+      })
       .returning();
 
     if (!delivery) {
-      throw new Error("Failed to create circuit_open delivery record");
+      const [existing] = await tx
+        .select({ id: deliveries.id })
+        .from(deliveries)
+        .where(
+          and(
+            eq(deliveries.eventId, data.eventId),
+            eq(deliveries.endpointId, data.endpointId),
+            eq(deliveries.status, "circuit_open"),
+          ),
+        )
+        .limit(1);
+
+      if (!existing) {
+        throw new Error("Failed to create circuit_open delivery record");
+      }
+      return { count, delivery: { id: existing.id } };
     }
     return { count, delivery: { id: delivery.id } };
   });

@@ -29,6 +29,13 @@
       "when": 1777480000000,
       "tag": "0003_calm_crimson_falcon",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777490000000,
+      "tag": "0004_add_circuit_open_unique_index",
+      "breakpoints": true
     }
   ]
 }

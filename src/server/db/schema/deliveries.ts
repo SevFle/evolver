@@ -7,6 +7,7 @@ import {
   integer,
   boolean,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { users } from "./users";
@@ -62,5 +63,8 @@ export const deliveries = pgTable(
       .on(table.nextRetryAt)
       .where(sql`${table.status} = 'retry_scheduled'`),
     eventIdIdx: index("deliveries_event_id_idx").on(table.eventId),
+    circuitOpenUniqueIdx: uniqueIndex("deliveries_circuit_open_uniq")
+      .on(table.eventId, table.endpointId)
+      .where(sql`${table.status} = 'circuit_open'`),
   }),
 );
