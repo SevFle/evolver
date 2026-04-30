@@ -48,6 +48,16 @@ END $$;--> statement-breakpoint
 -- Existing rows inherit 'direct' automatically (safe for pre-existing data).
 ALTER TABLE "endpoint_subscriptions" ADD COLUMN IF NOT EXISTS "delivery_mode" text NOT NULL DEFAULT 'direct';--> statement-breakpoint
 
+-- GUARD: Reject migration if any endpoint_subscriptions rows have both
+-- endpoint_id AND endpoint_group_id non-null. Such rows would violate the
+-- new delivery_mode CHECK constraint (mutual exclusivity).
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM "endpoint_subscriptions" WHERE "endpoint_id" IS NOT NULL AND "endpoint_group_id" IS NOT NULL) THEN
+    RAISE EXCEPTION 'Data corruption detected: endpoint_subscriptions rows with both endpoint_id AND endpoint_group_id non-null exist. Aborting migration to prevent silent data corruption.';
+  END IF;
+END $$;--> statement-breakpoint
+
 -- SUBSCRIPTIONS: CHECK constraint enforcing mutual exclusivity of delivery targets
 -- direct: endpoint_id set, endpoint_group_id null
 -- group: endpoint_group_id set, endpoint_id null
@@ -72,15 +82,16 @@ END $$;--> statement-breakpoint
 DROP INDEX IF EXISTS "endpoint_subscriptions_endpoint_event_type_uniq";--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "endpoint_subscriptions_direct_event_type_uniq" ON "endpoint_subscriptions" USING btree ("endpoint_id","event_type") WHERE "endpoint_id" IS NOT NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "endpoint_subscriptions_group_event_type_uniq" ON "endpoint_subscriptions" USING btree ("endpoint_group_id","event_type") WHERE "endpoint_group_id" IS NOT NULL;--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "endpoint_subscriptions_fanout_event_type_uniq" ON "endpoint_subscriptions" USING btree ("user_id","event_type") WHERE "endpoint_id" IS NULL AND "endpoint_group_id" IS NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "endpoint_subscriptions_fanout_event_type_uniq" ON "endpoint_subscriptions" USING btree ("user_id","event_type") WHERE "user_id" IS NOT NULL AND "endpoint_id" IS NULL AND "endpoint_group_id" IS NULL;--> statement-breakpoint
 
 -- EVENTS: Add delivery_mode column as nullable (backfill follows)
 ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "delivery_mode" text;--> statement-breakpoint
 
 -- EVENTS: Backfill delivery_mode from existing target columns
--- Uses a batched UPDATE approach to avoid holding locks on the entire events
--- table. Each batch updates at most batch_size rows. A statement_timeout of 5s
--- acts as a safety net per batch iteration. The CASE WHEN order prioritises
+-- Uses a cursor-based batched UPDATE approach to avoid holding locks on the
+-- entire events table. Each batch tracks max(id) and uses WHERE id > cursor
+-- to eliminate re-scanning of already-processed rows. A statement_timeout of
+-- 5s acts as a safety net per batch iteration. The CASE WHEN order prioritises
 -- endpoint_id (direct) over endpoint_group_id (group) to handle overlap rows
 -- where both columns are non-null (caught by the guard above in production,
 -- but the priority ensures deterministic classification regardless).
@@ -89,23 +100,34 @@ DECLARE
   batch_size CONSTANT int := 5000;
   updated_count int := 1;
   total_updated int := 0;
+  cursor_id bigint := 0;
+  batch_max_id bigint;
 BEGIN
   PERFORM set_config('statement_timeout', '5s', true);
 
   WHILE updated_count > 0 LOOP
+    SELECT max(id) INTO batch_max_id FROM (
+      SELECT id FROM "events"
+      WHERE id > cursor_id AND "delivery_mode" IS NULL
+      ORDER BY id
+      LIMIT batch_size
+    ) batch;
+
+    EXIT WHEN batch_max_id IS NULL;
+
     UPDATE "events" SET "delivery_mode" = CASE
       WHEN endpoint_id IS NOT NULL THEN 'direct'
       WHEN endpoint_group_id IS NOT NULL THEN 'group'
       ELSE 'fanout'
     END
-    WHERE id IN (
-      SELECT id FROM "events"
-      WHERE "delivery_mode" IS NULL
-      LIMIT batch_size
-    );
+    WHERE "delivery_mode" IS NULL AND id > cursor_id AND id <= batch_max_id;
+
     GET DIAGNOSTICS updated_count = ROW_COUNT;
     total_updated := total_updated + updated_count;
+    cursor_id := batch_max_id;
   END LOOP;
+
+  PERFORM set_config('statement_timeout', '0', true);
 
   RAISE NOTICE 'Backfilled delivery_mode for % event rows', total_updated;
 END $$;--> statement-breakpoint
@@ -144,10 +166,14 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;--> statement-breakpoint
-CREATE TRIGGER "endpoint_subscriptions_set_updated_at"
-  BEFORE UPDATE ON "endpoint_subscriptions"
-  FOR EACH ROW
-  EXECUTE FUNCTION "set_updated_at"();--> statement-breakpoint
+DO $$
+BEGIN
+  CREATE TRIGGER "endpoint_subscriptions_set_updated_at"
+    BEFORE UPDATE ON "endpoint_subscriptions"
+    FOR EACH ROW
+    EXECUTE FUNCTION "set_updated_at"();
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;--> statement-breakpoint
 
 -- EVENTS: Replace endpoint_group_id FK (SET NULL from migration 0001 → RESTRICT)
 -- RESTRICT prevents accidental group deletion while live events reference it.

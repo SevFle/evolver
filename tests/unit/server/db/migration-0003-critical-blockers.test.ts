@@ -193,6 +193,45 @@ describe("CRITICAL: migration 0003 — events backfill handles overlap rows", ()
     );
     expect(hasSubsBackfill).toBeNull();
   });
+
+  it("FIXED: backfill DO block resets statement_timeout after loop completes", () => {
+    const backfillDoStart = m3.indexOf("PERFORM set_config('statement_timeout', '5s', true)");
+    const backfillDoEnd = m3.indexOf("END $$;", backfillDoStart);
+    const backfillBlock = m3.slice(backfillDoStart, backfillDoEnd);
+    expect(backfillBlock).toContain("PERFORM set_config('statement_timeout', '0', true)");
+    const resetPos = backfillBlock.indexOf("PERFORM set_config('statement_timeout', '0', true)");
+    const loopEndPos = backfillBlock.indexOf("END LOOP;");
+    expect(resetPos).toBeGreaterThan(loopEndPos);
+  });
+
+  it("backfill uses cursor-based pagination with cursor_id variable", () => {
+    const backfillDoStart = m3.indexOf("PERFORM set_config('statement_timeout', '5s', true)");
+    const backfillDoEnd = m3.indexOf("END $$;", backfillDoStart);
+    const backfillBlock = m3.slice(backfillDoStart, backfillDoEnd);
+    expect(backfillBlock).toContain("cursor_id");
+    expect(backfillBlock).toContain("batch_max_id");
+  });
+
+  it("backfill uses WHERE id > cursor_id to skip already-processed rows", () => {
+    const backfillDoStart = m3.indexOf("PERFORM set_config('statement_timeout', '5s', true)");
+    const backfillDoEnd = m3.indexOf("END $$;", backfillDoStart);
+    const backfillBlock = m3.slice(backfillDoStart, backfillDoEnd);
+    expect(backfillBlock).toMatch(/id\s*>\s*cursor_id/);
+  });
+
+  it("backfill uses ORDER BY id for deterministic cursor advancement", () => {
+    const backfillDoStart = m3.indexOf("PERFORM set_config('statement_timeout', '5s', true)");
+    const backfillDoEnd = m3.indexOf("END $$;", backfillDoStart);
+    const backfillBlock = m3.slice(backfillDoStart, backfillDoEnd);
+    expect(backfillBlock).toContain("ORDER BY id");
+  });
+
+  it("backfill advances cursor with cursor_id := batch_max_id", () => {
+    const backfillDoStart = m3.indexOf("PERFORM set_config('statement_timeout', '5s', true)");
+    const backfillDoEnd = m3.indexOf("END $$;", backfillDoStart);
+    const backfillBlock = m3.slice(backfillDoStart, backfillDoEnd);
+    expect(backfillBlock).toContain("cursor_id := batch_max_id");
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -235,6 +274,15 @@ describe("CRITICAL BLOCKER: endpoint_subscriptions unique index — NULL-duplica
     );
     expect(subsSource).toMatch(
       /fanoutEventTypeUnique[\s\S]*?\.where\([\s\S]*?endpointId.*IS NULL.*endpointGroupId.*IS NULL/s,
+    );
+  });
+
+  it("FIXED: fanout mode partial unique index excludes NULL user_id to prevent NULL-duplicate subscriptions", () => {
+    expect(subsSource).toMatch(
+      /fanoutEventTypeUnique[\s\S]*?\.where\([\s\S]*?userId.*IS NOT NULL/s,
+    );
+    expect(m3).toContain(
+      'WHERE "user_id" IS NOT NULL AND "endpoint_id" IS NULL AND "endpoint_group_id" IS NULL',
     );
   });
 
@@ -324,6 +372,27 @@ describe("CRITICAL BLOCKER: endpoint_subscriptions unique index — NULL-duplica
       expect(idx.method).toBe("btree");
       expect(idx.where).toBeDefined();
     }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// (3b) MIGRATION 0003: ENDPOINT_SUBSCRIPTIONS CORRUPTION GUARD
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("CRITICAL: migration 0003 — endpoint_subscriptions corruption guard", () => {
+  it("includes an IF EXISTS guard checking endpoint_subscriptions for overlapping target columns", () => {
+    expect(m3).toContain('SELECT 1 FROM "endpoint_subscriptions" WHERE "endpoint_id" IS NOT NULL AND "endpoint_group_id" IS NOT NULL');
+  });
+
+  it("endpoint_subscriptions guard raises exception on corruption", () => {
+    expect(m3).toContain("endpoint_subscriptions rows with both endpoint_id AND endpoint_group_id non-null exist");
+  });
+
+  it("endpoint_subscriptions guard is placed before the CHECK constraint", () => {
+    const guardPos = m3.indexOf("endpoint_subscriptions rows with both endpoint_id AND endpoint_group_id non-null exist");
+    const checkPos = m3.indexOf("endpoint_subscriptions_delivery_mode_check");
+    expect(guardPos).toBeGreaterThan(-1);
+    expect(guardPos).toBeLessThan(checkPos);
   });
 });
 
@@ -491,12 +560,12 @@ describe("CRITICAL: resolveSubscribedEndpoints — NULL endpointId safety", () =
     expect(resolveFn).toContain("endpointSubscriptions.endpointId");
   });
 
-  it("WARN: maps endpointId without filtering NULLs before passing to getActiveEndpointsByIds", () => {
+  it("FIXED: resolveSubscribedEndpoints filters NULL endpointIds before passing to getActiveEndpointsByIds", () => {
     const resolveFn = queriesSource.match(
       /export async function resolveSubscribedEndpoints[\s\S]*?^}/m,
     )?.[0] ?? "";
     const hasNullFilter = resolveFn.includes("is not null") || resolveFn.includes("IS NOT NULL") || resolveFn.includes("!== null") || resolveFn.includes("!= null");
-    expect(hasNullFilter).toBe(false);
+    expect(hasNullFilter).toBe(true);
   });
 
   it("BLOCKER: endpointId in subscription can be NULL when delivery_mode='fanout' or 'group'", () => {
@@ -611,6 +680,16 @@ describe("migration chain — full sequential integrity", () => {
     expect(m3).toContain("set_updated_at");
     expect(m3).toContain("endpoint_subscriptions_set_updated_at");
     expect(m3).toContain("BEFORE UPDATE ON");
+  });
+
+  it("FIXED: CREATE TRIGGER is wrapped in DO block with EXCEPTION WHEN duplicate_object for idempotency", () => {
+    const triggerPos = m3.indexOf("CREATE TRIGGER");
+    const doBlockStart = m3.lastIndexOf("DO $$", triggerPos);
+    const exceptionPos = m3.indexOf("EXCEPTION WHEN duplicate_object", doBlockStart);
+    const endBlockPos = m3.indexOf("END $$;", triggerPos);
+    expect(doBlockStart).toBeGreaterThan(-1);
+    expect(exceptionPos).toBeGreaterThan(doBlockStart);
+    expect(exceptionPos).toBeLessThan(endBlockPos);
   });
 });
 
@@ -840,7 +919,7 @@ describe("CRITICAL BLOCKERS SUMMARY", () => {
     expect(hasWhereClauses).toBe(true);
   });
 
-  it("BLOCKER 2: resolveSubscribedEndpoints does not filter NULL endpointIds", () => {
+  it("RESOLVED: resolveSubscribedEndpoints filters NULL endpointIds before passing to getActiveEndpointsByIds", () => {
     const resolveFn = queriesSource.match(
       /export async function resolveSubscribedEndpoints[\s\S]*?^}/m,
     )?.[0] ?? "";
@@ -848,7 +927,8 @@ describe("CRITICAL BLOCKERS SUMMARY", () => {
     const hasNullFilter =
       resolveFn.includes("!== null") || resolveFn.includes("!= null") ||
       resolveFn.includes("is not null") || resolveFn.includes("IS NOT NULL");
-    expect(collectsEndpointId && !hasNullFilter).toBe(true);
+    expect(collectsEndpointId).toBe(true);
+    expect(hasNullFilter).toBe(true);
   });
 
   it("BLOCKER 3: migration 0003 could fail if existing events have both endpoint_id AND endpoint_group_id set", () => {

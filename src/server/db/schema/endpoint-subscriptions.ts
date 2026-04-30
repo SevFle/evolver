@@ -58,7 +58,7 @@ export const endpointSubscriptions = pgTable(
     )
       .on(table.userId, table.eventType)
       .where(
-        sql`${table.endpointId} IS NULL AND ${table.endpointGroupId} IS NULL`,
+        sql`${table.userId} IS NOT NULL AND ${table.endpointId} IS NULL AND ${table.endpointGroupId} IS NULL`,
       ),
     deliveryModeCheck: check(
       "endpoint_subscriptions_delivery_mode_check",
