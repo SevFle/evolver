@@ -5,21 +5,16 @@ import {
   getEventById,
   createDelivery,
   updateEventStatus,
-  getConsecutiveFailures,
-  updateEndpoint,
   getSuccessfulDelivery,
-  getUserById,
-  getLastErrorForEndpoint,
   updateFanoutEventStatus,
 } from "@/server/db/queries";
 import { deliverWebhook, isSuccessfulDelivery } from "@/server/services/delivery";
 import { getNextRetryAt, hasRetriesRemaining } from "@/server/services/retry";
 import {
-  getEndpointStatusAfterFailure,
-  getEndpointStatusAfterSuccess,
-} from "@/server/services/circuit";
-import { sendFailureAlert, markSent, clearAlertRateLimit } from "@/server/services/email";
-import { MAX_PAYLOAD_RESPONSE_SIZE, CIRCUIT_BREAKER_THRESHOLD } from "@/lib/constants";
+  processFailureAlert,
+  resetAlertStateOnSuccess,
+} from "@/server/services/alerting";
+import { MAX_PAYLOAD_RESPONSE_SIZE } from "@/lib/constants";
 
 function truncateResponse(body: string): string {
   if (body.length <= MAX_PAYLOAD_RESPONSE_SIZE) return body;
@@ -89,11 +84,7 @@ export async function handleDelivery(data: DeliveryJobData): Promise<void> {
       } else {
         await updateEventStatus(event.id, "delivered");
       }
-      if (endpoint.status === "degraded") {
-        await updateEndpoint(endpoint.id, {
-          status: getEndpointStatusAfterSuccess(),
-        });
-      }
+      await resetAlertStateOnSuccess(endpoint.id, endpoint.status);
     } else {
       await handleFailedDelivery(
         event.id,
@@ -171,51 +162,10 @@ async function handleFailedDelivery(
     }
   }
 
-  const consecutiveFailures = await getConsecutiveFailures(endpoint.id);
-  const newStatus = getEndpointStatusAfterFailure(consecutiveFailures);
-  if (newStatus !== "active") {
-    await updateEndpoint(endpoint.id, { status: newStatus });
-  }
-
-  if (consecutiveFailures >= CIRCUIT_BREAKER_THRESHOLD) {
-    const markResult = await markSent(endpoint.id);
-    if (markResult === "OK") {
-      console.warn(
-        `Endpoint ${endpoint.id} has ${consecutiveFailures} consecutive failures. Status: ${newStatus}. Sending alert.`,
-      );
-
-      try {
-        const user = await getUserById(endpoint.userId);
-        if (!user) {
-          console.error(`User ${endpoint.userId} not found for endpoint ${endpoint.id}`);
-          await clearAlertRateLimit(endpoint.id);
-          return;
-        }
-
-        const error = await getLastErrorForEndpoint(endpoint.id);
-        const dashboardBase = process.env.DASHBOARD_URL ?? "http://localhost:3000";
-
-        const result = await sendFailureAlert({
-          endpointId: endpoint.id,
-          endpointName: endpoint.name,
-          endpointUrl: endpoint.url,
-          failureCount: consecutiveFailures,
-          lastErrorMessage: error,
-          dashboardUrl: `${dashboardBase}/dashboard/endpoints/${endpoint.id}`,
-          userEmail: user.email,
-        });
-        if (!result.success) {
-          await clearAlertRateLimit(endpoint.id);
-          console.error(`Failed to send failure alert for endpoint ${endpoint.id}: ${result.error}`);
-        }
-      } catch (err) {
-        try {
-          await clearAlertRateLimit(endpoint.id);
-        } catch {
-          // best-effort: don't let clearAlertRateLimit failure mask the original error
-        }
-        console.error(`Failed to send failure alert for endpoint ${endpoint.id}:`, err);
-      }
-    }
-  }
+  await processFailureAlert({
+    endpointId: endpoint.id,
+    endpointName: endpoint.name,
+    endpointUrl: endpoint.url,
+    userId: endpoint.userId,
+  });
 }

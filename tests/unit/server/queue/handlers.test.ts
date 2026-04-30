@@ -5,21 +5,15 @@ const mockGetEventById = vi.fn();
 const mockGetEndpointById = vi.fn();
 const mockCreateDelivery = vi.fn().mockResolvedValue(undefined);
 const mockUpdateEventStatus = vi.fn().mockResolvedValue(undefined);
-const mockGetConsecutiveFailures = vi.fn().mockResolvedValue(0);
-const mockUpdateEndpoint = vi.fn().mockResolvedValue(undefined);
-const mockGetUserById = vi.fn();
-const mockGetLastErrorForEndpoint = vi.fn().mockResolvedValue(null);
+const mockUpdateFanoutEventStatus = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("@/server/db/queries", () => ({
   getEndpointById: (...args: unknown[]) => mockGetEndpointById(...args),
   getEventById: (...args: unknown[]) => mockGetEventById(...args),
   createDelivery: (...args: unknown[]) => mockCreateDelivery(...args),
   updateEventStatus: (...args: unknown[]) => mockUpdateEventStatus(...args),
-  getConsecutiveFailures: (...args: unknown[]) => mockGetConsecutiveFailures(...args),
-  updateEndpoint: (...args: unknown[]) => mockUpdateEndpoint(...args),
   getSuccessfulDelivery: (...args: unknown[]) => mockGetSuccessfulDelivery(...args),
-  getUserById: (...args: unknown[]) => mockGetUserById(...args),
-  getLastErrorForEndpoint: (...args: unknown[]) => mockGetLastErrorForEndpoint(...args),
+  updateFanoutEventStatus: (...args: unknown[]) => mockUpdateFanoutEventStatus(...args),
 }));
 
 const mockDeliverWebhook = vi.fn();
@@ -38,22 +32,12 @@ vi.mock("@/server/services/retry", () => ({
   hasRetriesRemaining: (...args: unknown[]) => mockHasRetriesRemaining(...args),
 }));
 
-const mockGetEndpointStatusAfterFailure = vi.fn();
-const mockGetEndpointStatusAfterSuccess = vi.fn().mockReturnValue("active");
+const mockProcessFailureAlert = vi.fn();
+const mockResetAlertStateOnSuccess = vi.fn().mockResolvedValue(false);
 
-vi.mock("@/server/services/circuit", () => ({
-  getEndpointStatusAfterFailure: (...args: unknown[]) => mockGetEndpointStatusAfterFailure(...args),
-  getEndpointStatusAfterSuccess: (...args: unknown[]) => mockGetEndpointStatusAfterSuccess(...args),
-}));
-
-const mockSendFailureAlert = vi.fn();
-const mockMarkSent = vi.fn();
-const mockClearAlertRateLimit = vi.fn().mockResolvedValue(undefined);
-
-vi.mock("@/server/services/email", () => ({
-  sendFailureAlert: (...args: unknown[]) => mockSendFailureAlert(...args),
-  markSent: (...args: unknown[]) => mockMarkSent(...args),
-  clearAlertRateLimit: (...args: unknown[]) => mockClearAlertRateLimit(...args),
+vi.mock("@/server/services/alerting", () => ({
+  processFailureAlert: (...args: unknown[]) => mockProcessFailureAlert(...args),
+  resetAlertStateOnSuccess: (...args: unknown[]) => mockResetAlertStateOnSuccess(...args),
 }));
 
 const mockEnqueueDelivery = vi.fn().mockResolvedValue("job-1");
@@ -107,50 +91,26 @@ describe("handleDelivery", () => {
     mockGetEndpointById.mockResolvedValue(baseEndpoint);
     mockCreateDelivery.mockResolvedValue(undefined);
     mockUpdateEventStatus.mockResolvedValue(undefined);
-    mockGetConsecutiveFailures.mockResolvedValue(0);
-    mockUpdateEndpoint.mockResolvedValue(undefined);
-    mockGetUserById.mockResolvedValue({ id: "user-001", email: "dev@example.com" });
-    mockGetLastErrorForEndpoint.mockResolvedValue("HTTP 500");
-    mockMarkSent.mockResolvedValue(null);
-    mockClearAlertRateLimit.mockResolvedValue(undefined);
-    mockSendFailureAlert.mockResolvedValue({ success: true, provider: "log" });
+    mockUpdateFanoutEventStatus.mockResolvedValue(undefined);
+    mockProcessFailureAlert.mockResolvedValue({
+      status: "active",
+      alertSent: false,
+      alertSkippedReason: "below_threshold",
+    });
+    mockResetAlertStateOnSuccess.mockResolvedValue(false);
     mockDeliverWebhook.mockResolvedValue(baseDeliveryResult);
     mockIsSuccessfulDelivery.mockReturnValue(false);
     mockHasRetriesRemaining.mockReturnValue(true);
     mockGetNextRetryAt.mockReturnValue(new Date(Date.now() + 60000));
-    mockGetEndpointStatusAfterFailure.mockReturnValue("active");
   });
 
-  describe("clearAlertRateLimit error handling", () => {
-    function setupAlertPath(overrides: { consecutiveFailures?: number } = {}) {
+  describe("alerting integration", () => {
+    it("calls processFailureAlert on delivery failure", async () => {
       mockIsSuccessfulDelivery.mockReturnValue(false);
       mockHasRetriesRemaining.mockReturnValue(false);
-      mockGetConsecutiveFailures.mockResolvedValue(
-        overrides.consecutiveFailures ?? 5,
-      );
-      mockGetEndpointStatusAfterFailure.mockReturnValue("degraded");
-      mockMarkSent.mockResolvedValue("OK");
-    }
-
-    it("calls clearAlertRateLimit when user is not found", async () => {
-      setupAlertPath();
-      mockGetUserById.mockResolvedValue(null);
-
-      await handleDelivery({
-        eventId: "evt-001",
-        endpointId: "ep-001",
-        attemptNumber: 5,
-      });
-
-      expect(mockClearAlertRateLimit).toHaveBeenCalledWith("ep-001");
-    });
-
-    it("calls clearAlertRateLimit when sendFailureAlert returns failure", async () => {
-      setupAlertPath();
-      mockSendFailureAlert.mockResolvedValue({
-        success: false,
-        provider: "resend",
-        error: "API key not configured",
+      mockProcessFailureAlert.mockResolvedValue({
+        status: "degraded",
+        alertSent: true,
       });
 
       await handleDelivery({
@@ -159,136 +119,70 @@ describe("handleDelivery", () => {
         attemptNumber: 5,
       });
 
-      expect(mockClearAlertRateLimit).toHaveBeenCalledWith("ep-001");
+      expect(mockProcessFailureAlert).toHaveBeenCalledWith({
+        endpointId: "ep-001",
+        endpointName: "Test Endpoint",
+        endpointUrl: "https://example.com/webhook",
+        userId: "user-001",
+      });
     });
 
-    it("calls clearAlertRateLimit in catch when getUserById throws", async () => {
-      setupAlertPath();
-      mockGetUserById.mockRejectedValue(new Error("DB connection lost"));
+    it("calls processFailureAlert even on exception path", async () => {
+      mockDeliverWebhook.mockRejectedValue(new Error("Network timeout"));
+      mockHasRetriesRemaining.mockReturnValue(true);
+      mockGetNextRetryAt.mockReturnValue(new Date(Date.now() + 60000));
 
       await handleDelivery({
         eventId: "evt-001",
         endpointId: "ep-001",
-        attemptNumber: 5,
+        attemptNumber: 1,
       });
 
-      expect(mockClearAlertRateLimit).toHaveBeenCalledWith("ep-001");
+      expect(mockProcessFailureAlert).toHaveBeenCalledWith({
+        endpointId: "ep-001",
+        endpointName: "Test Endpoint",
+        endpointUrl: "https://example.com/webhook",
+        userId: "user-001",
+      });
     });
 
-    it("calls clearAlertRateLimit in catch when sendFailureAlert throws", async () => {
-      setupAlertPath();
-      mockSendFailureAlert.mockRejectedValue(new Error("Email service down"));
+    it("calls resetAlertStateOnSuccess on successful delivery", async () => {
+      mockIsSuccessfulDelivery.mockReturnValue(true);
 
       await handleDelivery({
         eventId: "evt-001",
         endpointId: "ep-001",
-        attemptNumber: 5,
+        attemptNumber: 1,
       });
 
-      expect(mockClearAlertRateLimit).toHaveBeenCalledWith("ep-001");
+      expect(mockResetAlertStateOnSuccess).toHaveBeenCalledWith("ep-001", "active");
     });
 
-    it("calls clearAlertRateLimit in catch when getLastErrorForEndpoint throws", async () => {
-      setupAlertPath({ consecutiveFailures: 6 });
-      mockGetLastErrorForEndpoint.mockRejectedValue(new Error("Query failed"));
+    it("calls resetAlertStateOnSuccess for degraded endpoint on success", async () => {
+      const degradedEndpoint = { ...baseEndpoint, status: "degraded" as const };
+      mockGetEndpointById.mockResolvedValue(degradedEndpoint);
+      mockIsSuccessfulDelivery.mockReturnValue(true);
+      mockResetAlertStateOnSuccess.mockResolvedValue(true);
 
       await handleDelivery({
         eventId: "evt-001",
         endpointId: "ep-001",
-        attemptNumber: 5,
+        attemptNumber: 1,
       });
 
-      expect(mockClearAlertRateLimit).toHaveBeenCalledWith("ep-001");
+      expect(mockResetAlertStateOnSuccess).toHaveBeenCalledWith("ep-001", "degraded");
     });
 
-    it("does not propagate error when clearAlertRateLimit itself throws inside catch", async () => {
-      setupAlertPath();
-      mockGetUserById.mockRejectedValue(new Error("original error"));
-      mockClearAlertRateLimit.mockRejectedValueOnce(new Error("Redis down"));
-
-      await expect(
-        handleDelivery({
-          eventId: "evt-001",
-          endpointId: "ep-001",
-          attemptNumber: 5,
-        }),
-      ).resolves.toBeUndefined();
-    });
-
-    it("logs original error when clearAlertRateLimit throws inside catch", async () => {
-      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-      setupAlertPath();
-      const originalError = new Error("original alert error");
-      mockGetUserById.mockRejectedValue(originalError);
-      mockClearAlertRateLimit.mockRejectedValueOnce(new Error("Redis down"));
+    it("does not call processFailureAlert on successful delivery", async () => {
+      mockIsSuccessfulDelivery.mockReturnValue(true);
 
       await handleDelivery({
         eventId: "evt-001",
         endpointId: "ep-001",
-        attemptNumber: 5,
+        attemptNumber: 1,
       });
 
-      expect(consoleError).toHaveBeenCalledWith(
-        expect.stringContaining("ep-001"),
-        originalError,
-      );
-    });
-  });
-
-  describe("alert gate - markSent", () => {
-    it("does not send alert when below CIRCUIT_BREAKER_THRESHOLD", async () => {
-      mockIsSuccessfulDelivery.mockReturnValue(false);
-      mockHasRetriesRemaining.mockReturnValue(false);
-      mockGetConsecutiveFailures.mockResolvedValue(3);
-      mockGetEndpointStatusAfterFailure.mockReturnValue("active");
-
-      await handleDelivery({
-        eventId: "evt-001",
-        endpointId: "ep-001",
-        attemptNumber: 5,
-      });
-
-      expect(mockMarkSent).not.toHaveBeenCalled();
-    });
-
-    it("does not send alert when markSent returns null (rate-limited)", async () => {
-      mockIsSuccessfulDelivery.mockReturnValue(false);
-      mockHasRetriesRemaining.mockReturnValue(false);
-      mockGetConsecutiveFailures.mockResolvedValue(5);
-      mockGetEndpointStatusAfterFailure.mockReturnValue("degraded");
-      mockMarkSent.mockResolvedValue(null);
-
-      await handleDelivery({
-        eventId: "evt-001",
-        endpointId: "ep-001",
-        attemptNumber: 5,
-      });
-
-      expect(mockMarkSent).toHaveBeenCalledWith("ep-001");
-      expect(mockSendFailureAlert).not.toHaveBeenCalled();
-      expect(mockClearAlertRateLimit).not.toHaveBeenCalled();
-    });
-
-    it("sends alert when markSent returns OK", async () => {
-      mockIsSuccessfulDelivery.mockReturnValue(false);
-      mockHasRetriesRemaining.mockReturnValue(false);
-      mockGetConsecutiveFailures.mockResolvedValue(5);
-      mockGetEndpointStatusAfterFailure.mockReturnValue("degraded");
-      mockMarkSent.mockResolvedValue("OK");
-
-      await handleDelivery({
-        eventId: "evt-001",
-        endpointId: "ep-001",
-        attemptNumber: 5,
-      });
-
-      expect(mockSendFailureAlert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          endpointId: "ep-001",
-          failureCount: 5,
-          userEmail: "dev@example.com",
-        }),
-      );
+      expect(mockProcessFailureAlert).not.toHaveBeenCalled();
     });
   });
 
@@ -297,8 +191,6 @@ describe("handleDelivery", () => {
       mockIsSuccessfulDelivery.mockReturnValue(false);
       mockHasRetriesRemaining.mockReturnValue(true);
       mockGetNextRetryAt.mockReturnValue(new Date(Date.now() + 60000));
-      mockGetConsecutiveFailures.mockResolvedValue(1);
-      mockGetEndpointStatusAfterFailure.mockReturnValue("active");
 
       await handleDelivery({
         eventId: "evt-001",
@@ -320,8 +212,6 @@ describe("handleDelivery", () => {
     it("moves to dead letter when retries exhausted", async () => {
       mockIsSuccessfulDelivery.mockReturnValue(false);
       mockHasRetriesRemaining.mockReturnValue(false);
-      mockGetConsecutiveFailures.mockResolvedValue(1);
-      mockGetEndpointStatusAfterFailure.mockReturnValue("active");
 
       await handleDelivery({
         eventId: "evt-001",
@@ -337,54 +227,6 @@ describe("handleDelivery", () => {
         expect.stringContaining("Max retries"),
       );
       expect(mockUpdateEventStatus).toHaveBeenCalledWith("evt-001", "failed");
-    });
-  });
-
-  describe("endpoint status transitions", () => {
-    it("updates endpoint to degraded after threshold failures", async () => {
-      mockIsSuccessfulDelivery.mockReturnValue(false);
-      mockHasRetriesRemaining.mockReturnValue(false);
-      mockGetConsecutiveFailures.mockResolvedValue(5);
-      mockGetEndpointStatusAfterFailure.mockReturnValue("degraded");
-      mockMarkSent.mockResolvedValue("OK");
-
-      await handleDelivery({
-        eventId: "evt-001",
-        endpointId: "ep-001",
-        attemptNumber: 5,
-      });
-
-      expect(mockUpdateEndpoint).toHaveBeenCalledWith("ep-001", {
-        status: "degraded",
-      });
-    });
-
-    it("recovers degraded endpoint on successful delivery", async () => {
-      const degradedEndpoint = { ...baseEndpoint, status: "degraded" as const };
-      mockGetEndpointById.mockResolvedValue(degradedEndpoint);
-      mockIsSuccessfulDelivery.mockReturnValue(true);
-
-      await handleDelivery({
-        eventId: "evt-001",
-        endpointId: "ep-001",
-        attemptNumber: 1,
-      });
-
-      expect(mockUpdateEndpoint).toHaveBeenCalledWith("ep-001", {
-        status: "active",
-      });
-    });
-
-    it("does not update active endpoint on success", async () => {
-      mockIsSuccessfulDelivery.mockReturnValue(true);
-
-      await handleDelivery({
-        eventId: "evt-001",
-        endpointId: "ep-001",
-        attemptNumber: 1,
-      });
-
-      expect(mockUpdateEndpoint).not.toHaveBeenCalled();
     });
   });
 
@@ -449,8 +291,6 @@ describe("handleDelivery", () => {
       mockDeliverWebhook.mockRejectedValue(new Error("Network timeout"));
       mockHasRetriesRemaining.mockReturnValue(true);
       mockGetNextRetryAt.mockReturnValue(new Date(Date.now() + 60000));
-      mockGetConsecutiveFailures.mockResolvedValue(1);
-      mockGetEndpointStatusAfterFailure.mockReturnValue("active");
 
       await handleDelivery({
         eventId: "evt-001",
@@ -465,13 +305,14 @@ describe("handleDelivery", () => {
         }),
       );
     });
+  });
 
-    it("uses lastErrorMessage from delivery when available in failure path", async () => {
+  describe("fanout events", () => {
+    it("uses updateFanoutEventStatus for fanout event on failure", async () => {
+      const fanoutEvent = { ...baseEvent, endpointGroupId: "group-001" };
+      mockGetEventById.mockResolvedValue(fanoutEvent);
       mockIsSuccessfulDelivery.mockReturnValue(false);
       mockHasRetriesRemaining.mockReturnValue(false);
-      mockGetConsecutiveFailures.mockResolvedValue(5);
-      mockGetEndpointStatusAfterFailure.mockReturnValue("degraded");
-      mockMarkSent.mockResolvedValue("OK");
 
       await handleDelivery({
         eventId: "evt-001",
@@ -479,32 +320,38 @@ describe("handleDelivery", () => {
         attemptNumber: 5,
       });
 
-      expect(mockSendFailureAlert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          lastErrorMessage: "HTTP 500",
-        }),
-      );
+      expect(mockUpdateFanoutEventStatus).toHaveBeenCalledWith("evt-001");
     });
 
-    it("falls back to getLastErrorForEndpoint when no lastErrorMessage", async () => {
-      mockDeliverWebhook.mockRejectedValue(new Error("timeout"));
-      mockHasRetriesRemaining.mockReturnValue(false);
-      mockGetConsecutiveFailures.mockResolvedValue(6);
-      mockGetEndpointStatusAfterFailure.mockReturnValue("degraded");
-      mockMarkSent.mockResolvedValue("OK");
-      mockGetLastErrorForEndpoint.mockResolvedValue("Database error");
+    it("uses updateFanoutEventStatus for fanout event on success", async () => {
+      const fanoutEvent = { ...baseEvent, endpointGroupId: "group-001" };
+      mockGetEventById.mockResolvedValue(fanoutEvent);
+      mockIsSuccessfulDelivery.mockReturnValue(true);
 
       await handleDelivery({
         eventId: "evt-001",
         endpointId: "ep-001",
-        attemptNumber: 5,
+        attemptNumber: 1,
       });
 
-      expect(mockSendFailureAlert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          lastErrorMessage: "Database error",
-        }),
-      );
+      expect(mockUpdateFanoutEventStatus).toHaveBeenCalledWith("evt-001");
+    });
+
+    it("uses updateFanoutEventStatus for disabled endpoint on fanout", async () => {
+      const fanoutEvent = { ...baseEvent, endpointGroupId: "group-001" };
+      mockGetEventById.mockResolvedValue(fanoutEvent);
+      mockGetEndpointById.mockResolvedValue({
+        ...baseEndpoint,
+        status: "disabled",
+      });
+
+      await handleDelivery({
+        eventId: "evt-001",
+        endpointId: "ep-001",
+        attemptNumber: 1,
+      });
+
+      expect(mockUpdateFanoutEventStatus).toHaveBeenCalledWith("evt-001");
     });
   });
 });
