@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+*.egg
+dist/
+build/
+taskpilot.db
+.evolve-prompt.md
