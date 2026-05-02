@@ -1,28 +1,45 @@
 # Wireframes
 
-Pencil wireframe previews for the SecureFlow compliance platform.
+Low-fidelity pencil wireframes for the CargoTrack shipment-tracking platform.
 
-- **Dashboard** — Central hub displaying active security questionnaires, pending tasks, and overall compliance status.
+Each screen has three companion files:
 
-  ![Dashboard](dashboard.png)
+- **`.ep`** – Pencil project archive (zipped XML)
+- **`.svg`** – Vector source used for rendering
+- **`.png`** – Rasterised preview image
 
-- **Questionnaire Upload** — Interface for users to upload new security questionnaires (PDF, DOCX, XLSX) for AI processing.
+---
 
-  ![Questionnaire Upload](questionnaire-upload.png)
+## Screens
 
-- **Questionnaire Responder** — Interactive editor displaying AI-generated answers mapped to original questions with linked evidence.
+- **[Login](login.png)**
+  Authenticate forwarder staff and route them to their tenant workspace.
+  Components: header, login form, forgot password link.
 
-  ![Questionnaire Responder](questionnaire-responder.png)
+- **[Dashboard](dashboard.png)**
+  Give operators an at-a-glance view of active shipments, recent milestones, and notification activity.
+  Components: header, sidebar nav, stat cards, recent shipments table, notification activity feed.
 
-- **Evidence Library** — Searchable repository for managing security policies, architectural diagrams, and generated proof artifacts.
+- **[Shipment List](shipment-list.png)**
+  Browse, search, and filter all tracked shipments across statuses and corridors.
+  Components: header, sidebar nav, search bar, filter controls, shipment table, pagination.
 
-  ![Evidence Library](evidence-library.png)
+- **[Shipment Detail](shipment-detail.png)**
+  View a single shipment's full milestone timeline, customer info, and notification history.
+  Components: header, sidebar nav, shipment info card, milestone timeline, customer contact card, notification log.
 
-- **Integrations Settings** — Configuration screen to connect engineering tools (AWS, GitHub, Jira) for continuous automated evidence collection.
+- **[Shipment Create](shipment-create.png)**
+  Manually add a new shipment or bulk-import via CSV upload.
+  Components: header, sidebar nav, shipment form, carrier selector, corridor template selector, CSV upload dropzone.
 
-  ![Integrations Settings](integrations-settings.png)
+- **[Branding Settings](branding-settings.png)**
+  Configure the forwarder's branded tracking page with logo, colors, and custom domain.
+  Components: header, sidebar nav, logo uploader, color picker, domain config form, live preview panel.
 
-- **Billing and Account** — Administrative screen for managing user profiles, team members, and monthly SaaS subscription tiers.
+- **[Notification Settings](notification-settings.png)**
+  Define which milestones trigger email or SMS notifications and customise message templates.
+  Components: header, sidebar nav, notification rule list, template editor, channel toggles, milestone trigger checkboxes.
 
-  ![Billing and Account](billing-and-account.png)
-
+- **[Customer Tracking Page](customer-tracking-page.png)**
+  Public branded page that end-customers view to track their shipment status and milestones.
+  Components: branded header with logo, shipment status summary card, milestone timeline, estimated delivery badge, carrier info block.
