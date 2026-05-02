@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+  <defs>
+    <style>
+      text { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; }
+    </style>
+  </defs>
+  <rect width="1200" height="900" fill="#ffffff"/>
+  <title>Billing and Account</title>
+
+  <!-- Top Navigation Bar -->
+  <rect x="0" y="0" width="1200" height="56" fill="#f5f5f5" stroke="#bbbbbb" stroke-width="1"/>
+  <rect x="20" y="16" width="120" height="24" rx="4" fill="#4a90d9"/>
+  <text x="80" y="33" text-anchor="middle" fill="white" font-size="13" font-weight="bold">SecureFlow</text>
+  <text x="200" y="35" fill="#333333" font-size="13" font-weight="600">Dashboard</text>
+  <text x="295" y="35" fill="#666666" font-size="13">Questionnaires</text>
+  <text x="410" y="35" fill="#666666" font-size="13">Evidence</text>
+  <text x="495" y="35" fill="#666666" font-size="13">Integrations</text>
+  <rect x="1120" y="16" width="60" height="24" rx="12" fill="#e8e8e8" stroke="#bbbbbb" stroke-width="1"/>
+  <text x="1150" y="33" text-anchor="middle" fill="#666666" font-size="11">User</text>
+
+  <rect x="0" y="56" width="240" height="844" fill="#f5f5f5" stroke="#bbbbbb" stroke-width="1"/>
+  <text x="20" y="88" fill="#333333" font-size="14" font-weight="bold">Settings</text>
+  <rect x="8" y="108" width="224" height="36" rx="4" fill="#e3f0fc" stroke="#4a90d9" stroke-width="1.5"/>
+  <text x="20" y="132" fill="#4a90d9" font-size="13" font-weight="bold">Profile</text>
+  <rect x="8" y="152" width="224" height="36" rx="4" fill="none" />
+  <text x="20" y="176" fill="#666666" font-size="13" >Team Members</text>
+  <rect x="8" y="196" width="224" height="36" rx="4" fill="none" />
+  <text x="20" y="220" fill="#666666" font-size="13" >Billing</text>
+  <rect x="8" y="240" width="224" height="36" rx="4" fill="none" />
+  <text x="20" y="264" fill="#666666" font-size="13" >Notifications</text>
+  <rect x="8" y="284" width="224" height="36" rx="4" fill="none" />
+  <text x="20" y="308" fill="#666666" font-size="13" >Security</text>
+  <rect x="8" y="328" width="224" height="36" rx="4" fill="none" />
+  <text x="20" y="352" fill="#666666" font-size="13" >API Keys</text>
+
+  <text x="270" y="92" fill="#333333" font-size="20" font-weight="bold">Profile</text>
+  <rect x="270" y="108" width="900" height="200" rx="8" fill="#f5f5f5" stroke="#bbbbbb" stroke-width="1.5"/>
+  <text x="290" y="140" fill="#333333" font-size="13" font-weight="600">Full Name</text>
+  <rect x="290" y="148" width="300" height="34" rx="4" fill="white" stroke="#bbbbbb" stroke-width="1"/>
+  <text x="302" y="170" fill="#333333" font-size="12">Alex Johnson</text>
+
+  <text x="610" y="140" fill="#333333" font-size="13" font-weight="600">Email</text>
+  <rect x="610" y="148" width="360" height="34" rx="4" fill="white" stroke="#bbbbbb" stroke-width="1"/>
+  <text x="622" y="170" fill="#333333" font-size="12">alex@company.com</text>
+
+  <text x="290" y="210" fill="#333333" font-size="13" font-weight="600">Company</text>
+  <rect x="290" y="218" width="300" height="34" rx="4" fill="white" stroke="#bbbbbb" stroke-width="1"/>
+  <text x="302" y="240" fill="#333333" font-size="12">Acme Corp</text>
+
+  <text x="610" y="210" fill="#333333" font-size="13" font-weight="600">Role</text>
+  <rect x="610" y="218" width="360" height="34" rx="4" fill="white" stroke="#bbbbbb" stroke-width="1"/>
+  <text x="622" y="240" fill="#333333" font-size="12">Security Administrator</text>
+
+  <rect x="290" y="265" width="100" height="30" rx="4" fill="#4a90d9"/>
+  <text x="340" y="285" text-anchor="middle" fill="white" font-size="12" font-weight="600">Save</text>
+
+  <text x="270" y="330" fill="#333333" font-size="16" font-weight="bold">Usage This Month</text>
+  <rect x="270" y="345" width="900" height="70" rx="8" fill="#f5f5f5" stroke="#bbbbbb" stroke-width="1.5"/>
+  <text x="290" y="370" fill="#666666" font-size="12">Questionnaires Processed</text>
+  <rect x="290" y="378" width="860" height="18" rx="9" fill="#e8e8e8"/>
+  <rect x="290" y="378" width="619" height="18" rx="9" fill="#4a90d9"/>
+  <text x="1150" y="392" text-anchor="end" fill="#333333" font-size="11" font-weight="600">36 / 50</text>
+
+  <text x="270" y="440" fill="#333333" font-size="16" font-weight="bold">Subscription Plan</text>
+  <rect x="270" y="458" width="286" height="250" rx="8" fill="#f5f5f5" stroke="#bbbbbb" stroke-width="1.5"/>
+  <text x="413" y="498" text-anchor="middle" fill="#333333" font-size="16" font-weight="bold">Starter</text>
+  <text x="413" y="526" text-anchor="middle" fill="#4a90d9" font-size="22" font-weight="bold">$49/mo</text>
+  <text x="300" y="558" fill="#666666" font-size="12">✓ 5 questionnaires/mo</text>
+  <text x="300" y="580" fill="#666666" font-size="12">✓ 1 user</text>
+  <text x="300" y="602" fill="#666666" font-size="12">✓ Email support</text>
+  <text x="300" y="624" fill="#666666" font-size="12">✓ Basic evidence</text>
+
+  <rect x="300" y="658" width="226" height="36" rx="5" fill="#f5f5f5" stroke="#4a90d9" stroke-width="1.5"/>
+  <text x="413" y="681" text-anchor="middle" fill="#4a90d9" font-size="12" font-weight="600">Upgrade</text>
+  <rect x="576" y="458" width="286" height="250" rx="8" fill="#e3f0fc" stroke="#4a90d9" stroke-width="2.5"/>
+  <rect x="679" y="448" width="80" height="20" rx="10" fill="#4a90d9"/>
+  <text x="719" y="462" text-anchor="middle" fill="white" font-size="10" font-weight="bold">POPULAR</text>
+  <text x="719" y="498" text-anchor="middle" fill="#333333" font-size="16" font-weight="bold">Professional</text>
+  <text x="719" y="526" text-anchor="middle" fill="#4a90d9" font-size="22" font-weight="bold">$149/mo</text>
+  <text x="606" y="558" fill="#666666" font-size="12">✓ 50 questionnaires/mo</text>
+  <text x="606" y="580" fill="#666666" font-size="12">✓ 10 users</text>
+  <text x="606" y="602" fill="#666666" font-size="12">✓ Priority support</text>
+  <text x="606" y="624" fill="#666666" font-size="12">✓ Advanced evidence</text>
+  <text x="606" y="646" fill="#666666" font-size="12">✓ API access</text>
+
+  <rect x="606" y="658" width="226" height="36" rx="5" fill="#4a90d9" stroke="#4a90d9" stroke-width="1.5"/>
+  <text x="719" y="681" text-anchor="middle" fill="white" font-size="12" font-weight="600">Current Plan</text>
+  <rect x="882" y="458" width="286" height="250" rx="8" fill="#f5f5f5" stroke="#bbbbbb" stroke-width="1.5"/>
+  <text x="1025" y="498" text-anchor="middle" fill="#333333" font-size="16" font-weight="bold">Enterprise</text>
+  <text x="1025" y="526" text-anchor="middle" fill="#4a90d9" font-size="22" font-weight="bold">Custom</text>
+  <text x="912" y="558" fill="#666666" font-size="12">✓ Unlimited questionnaires</text>
+  <text x="912" y="580" fill="#666666" font-size="12">✓ Unlimited users</text>
+  <text x="912" y="602" fill="#666666" font-size="12">✓ Dedicated support</text>
+  <text x="912" y="624" fill="#666666" font-size="12">✓ Custom integrations</text>
+  <text x="912" y="646" fill="#666666" font-size="12">✓ SLA guarantee</text>
+  <text x="912" y="668" fill="#666666" font-size="12">✓ SSO/SAML</text>
+
+  <rect x="912" y="658" width="226" height="36" rx="5" fill="#f5f5f5" stroke="#4a90d9" stroke-width="1.5"/>
+  <text x="1025" y="681" text-anchor="middle" fill="#4a90d9" font-size="12" font-weight="600">Upgrade</text>
+</svg>

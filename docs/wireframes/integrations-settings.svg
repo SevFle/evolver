@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+  <defs>
+    <style>
+      text { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; }
+    </style>
+  </defs>
+  <rect width="1200" height="900" fill="#ffffff"/>
+  <title>Integrations Settings</title>
+
+  <!-- Top Navigation Bar -->
+  <rect x="0" y="0" width="1200" height="56" fill="#f5f5f5" stroke="#bbbbbb" stroke-width="1"/>
+  <rect x="20" y="16" width="120" height="24" rx="4" fill="#4a90d9"/>
+  <text x="80" y="33" text-anchor="middle" fill="white" font-size="13" font-weight="bold">SecureFlow</text>
+  <text x="200" y="35" fill="#333333" font-size="13" font-weight="600">Dashboard</text>
+  <text x="295" y="35" fill="#666666" font-size="13">Questionnaires</text>
+  <text x="410" y="35" fill="#666666" font-size="13">Evidence</text>
+  <text x="495" y="35" fill="#666666" font-size="13">Integrations</text>
+  <rect x="1120" y="16" width="60" height="24" rx="12" fill="#e8e8e8" stroke="#bbbbbb" stroke-width="1"/>
+  <text x="1150" y="33" text-anchor="middle" fill="#666666" font-size="11">User</text>
+
+  <text x="40" y="100" fill="#333333" font-size="22" font-weight="bold">Integrations</text>
+  <text x="40" y="122" fill="#666666" font-size="13">Connect your engineering tools for continuous automated evidence collection.</text>
+
+  <rect x="40" y="150" width="1120" height="95" rx="8" fill="#f5f5f5" stroke="#bbbbbb" stroke-width="1.5"/>
+  <rect x="60" y="168" width="50" height="50" rx="8" fill="#e8e8e8" stroke="#bbbbbb" stroke-width="1"/>
+  <text x="85" y="200" text-anchor="middle" fill="#666666" font-size="18">⚡</text>
+  <text x="130" y="188" fill="#333333" font-size="15" font-weight="bold">AWS (Amazon Web Services)</text>
+  <text x="130" y="208" fill="#666666" font-size="12">Cloud Infrastructure</text>
+  <circle cx="750" cy="180" r="5" fill="#5cb85c"/>
+  <text x="762" y="185" fill="#666666" font-size="12">Synced 5 min ago</text>
+
+  <rect x="1040" y="175" width="50" height="26" rx="13" fill="#5cb85c"/>
+  <circle cx="1077" cy="188" r="10" fill="white"/>
+
+  <text x="750" y="210" fill="#4a90d9" font-size="12" font-weight="600">Configure</text>
+  <text x="840" y="210" fill="#d9534f" font-size="12">Disconnect</text>
+
+  <rect x="40" y="260" width="1120" height="95" rx="8" fill="#f5f5f5" stroke="#bbbbbb" stroke-width="1.5"/>
+  <rect x="60" y="278" width="50" height="50" rx="8" fill="#e8e8e8" stroke="#bbbbbb" stroke-width="1"/>
+  <text x="85" y="310" text-anchor="middle" fill="#666666" font-size="18">⚡</text>
+  <text x="130" y="298" fill="#333333" font-size="15" font-weight="bold">GitHub</text>
+  <text x="130" y="318" fill="#666666" font-size="12">Source Code &amp; CI/CD</text>
+  <circle cx="750" cy="290" r="5" fill="#5cb85c"/>
+  <text x="762" y="295" fill="#666666" font-size="12">Synced 2 min ago</text>
+
+  <rect x="1040" y="285" width="50" height="26" rx="13" fill="#5cb85c"/>
+  <circle cx="1077" cy="298" r="10" fill="white"/>
+
+  <text x="750" y="320" fill="#4a90d9" font-size="12" font-weight="600">Configure</text>
+  <text x="840" y="320" fill="#d9534f" font-size="12">Disconnect</text>
+
+  <rect x="40" y="370" width="1120" height="95" rx="8" fill="#f5f5f5" stroke="#bbbbbb" stroke-width="1.5"/>
+  <rect x="60" y="388" width="50" height="50" rx="8" fill="#e8e8e8" stroke="#bbbbbb" stroke-width="1"/>
+  <text x="85" y="420" text-anchor="middle" fill="#666666" font-size="18">⚡</text>
+  <text x="130" y="408" fill="#333333" font-size="15" font-weight="bold">Jira</text>
+  <text x="130" y="428" fill="#666666" font-size="12">Project Management</text>
+  <circle cx="750" cy="400" r="5" fill="#5cb85c"/>
+  <text x="762" y="405" fill="#666666" font-size="12">Synced 15 min ago</text>
+
+  <rect x="1040" y="395" width="50" height="26" rx="13" fill="#5cb85c"/>
+  <circle cx="1077" cy="408" r="10" fill="white"/>
+
+  <text x="750" y="430" fill="#4a90d9" font-size="12" font-weight="600">Configure</text>
+  <text x="840" y="430" fill="#d9534f" font-size="12">Disconnect</text>
+
+  <rect x="40" y="480" width="1120" height="95" rx="8" fill="#f5f5f5" stroke="#bbbbbb" stroke-width="1.5"/>
+  <rect x="60" y="498" width="50" height="50" rx="8" fill="#e8e8e8" stroke="#bbbbbb" stroke-width="1"/>
+  <text x="85" y="530" text-anchor="middle" fill="#666666" font-size="18">⚡</text>
+  <text x="130" y="518" fill="#333333" font-size="15" font-weight="bold">Okta</text>
+  <text x="130" y="538" fill="#666666" font-size="12">Identity &amp; Access</text>
+  <circle cx="750" cy="510" r="5" fill="#999999"/>
+  <text x="762" y="515" fill="#666666" font-size="12">Not connected</text>
+
+  <rect x="1040" y="505" width="50" height="26" rx="13" fill="#d0d0d0"/>
+  <circle cx="1053" cy="518" r="10" fill="white"/>
+  <text x="750" y="540" fill="#4a90d9" font-size="12" font-weight="600">Connect</text>
+
+  <rect x="40" y="590" width="1120" height="95" rx="8" fill="#f5f5f5" stroke="#bbbbbb" stroke-width="1.5"/>
+  <rect x="60" y="608" width="50" height="50" rx="8" fill="#e8e8e8" stroke="#bbbbbb" stroke-width="1"/>
+  <text x="85" y="640" text-anchor="middle" fill="#666666" font-size="18">⚡</text>
+  <text x="130" y="628" fill="#333333" font-size="15" font-weight="bold">Datadog</text>
+  <text x="130" y="648" fill="#666666" font-size="12">Monitoring &amp; Alerting</text>
+  <circle cx="750" cy="620" r="5" fill="#999999"/>
+  <text x="762" y="625" fill="#666666" font-size="12">Not connected</text>
+
+  <rect x="1040" y="615" width="50" height="26" rx="13" fill="#d0d0d0"/>
+  <circle cx="1053" cy="628" r="10" fill="white"/>
+  <text x="750" y="650" fill="#4a90d9" font-size="12" font-weight="600">Connect</text>
+
+  <rect x="40" y="700" width="1120" height="95" rx="8" fill="#f5f5f5" stroke="#bbbbbb" stroke-width="1.5"/>
+  <rect x="60" y="718" width="50" height="50" rx="8" fill="#e8e8e8" stroke="#bbbbbb" stroke-width="1"/>
+  <text x="85" y="750" text-anchor="middle" fill="#666666" font-size="18">⚡</text>
+  <text x="130" y="738" fill="#333333" font-size="15" font-weight="bold">Splunk</text>
+  <text x="130" y="758" fill="#666666" font-size="12">SIEM &amp; Log Management</text>
+  <circle cx="750" cy="730" r="5" fill="#999999"/>
+  <text x="762" y="735" fill="#666666" font-size="12">Not connected</text>
+
+  <rect x="1040" y="725" width="50" height="26" rx="13" fill="#d0d0d0"/>
+  <circle cx="1053" cy="738" r="10" fill="white"/>
+  <text x="750" y="760" fill="#4a90d9" font-size="12" font-weight="600">Connect</text>
+</svg>
