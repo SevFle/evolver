@@ -9,5 +9,5 @@ htmlcov/
 *.egg
 dist/
 build/
-*.db
+taskpilot.db
 .evolve-prompt.md
