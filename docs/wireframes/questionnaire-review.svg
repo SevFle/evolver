@@ -1,0 +1,175 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="900" viewBox="0 0 1280 900">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+  </defs>
+  <rect width="1280" height="900" fill="#F7FAFC"/>
+  
+  <!-- Header -->
+  <rect width="1280" height="60" fill="#2D3748"/>
+  <text x="32" y="38" fill="white" font-size="20" font-weight="700">SecureResp</text>
+  <text x="480" y="38" fill="#A0AEC0" font-size="14">Dashboard</text>
+  <text x="580" y="38" fill="#CBD5E0" font-size="14">Questionnaires</text>
+  <text x="720" y="38" fill="#A0AEC0" font-size="14">Evidence</text>
+  <text x="810" y="38" fill="#A0AEC0" font-size="14">Sources</text>
+  <text x="890" y="38" fill="#A0AEC0" font-size="14">Settings</text>
+  <circle cx="1230" cy="30" r="18" fill="#4299E1"/>
+  <text x="1224" y="35" fill="white" font-size="14" font-weight="600">JD</text>
+
+  <!-- Sub-header bar -->
+  <rect x="0" y="60" width="1280" height="56" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="32" y="94" fill="#2D3748" font-size="16" font-weight="600">Acme Corp — SOC 2 Questionnaire</text>
+  <!-- Progress indicator -->
+  <text x="400" y="94" fill="#A0AEC0" font-size="13">Progress:</text>
+  <rect x="460" y="82" width="200" height="8" rx="4" fill="#E2E8F0"/>
+  <rect x="460" y="82" width="150" height="8" rx="4" fill="#48BB78"/>
+  <text x="670" y="94" fill="#48BB78" font-size="13" font-weight="600">18/24 answered</text>
+  
+  <!-- Action buttons in sub-header -->
+  <rect x="920" y="72" width="110" height="32" rx="6" fill="white" stroke="#48BB78" stroke-width="1"/>
+  <text x="940" y="93" fill="#48BB78" font-size="12" font-weight="600">✓ Approve All</text>
+  <rect x="1042" y="72" width="100" height="32" rx="6" fill="#4299E1"/>
+  <text x="1062" y="93" fill="white" font-size="12" font-weight="600">Export ↓</text>
+  <rect x="1154" y="72" width="80" height="32" rx="6" fill="white" stroke="#CBD5E0" stroke-width="1"/>
+  <text x="1174" y="93" fill="#4A5568" font-size="12">Back</text>
+
+  <!-- Main Content: Q&A List -->
+  <!-- Q&A Item 1 -->
+  <rect x="32" y="136" width="820" height="145" rx="8" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+  <!-- Number badge -->
+  <rect x="44" y="148" width="28" height="28" rx="14" fill="#48BB78"/>
+  <text x="52" y="167" fill="white" font-size="12" font-weight="600">1</text>
+  <text x="82" y="166" fill="#2D3748" font-size="13" font-weight="600">Describe your access control policy and how least privilege is enforced.</text>
+  <!-- Confidence indicator -->
+  <rect x="700" y="148" width="72" height="22" rx="4" fill="#C6F6D5"/>
+  <text x="708" y="163" fill="#276749" font-size="11" font-weight="600">95% match</text>
+  
+  <!-- Answer field -->
+  <rect x="52" y="182" width="788" height="58" rx="4" fill="#F7FAFC" stroke="#CBD5E0" stroke-width="1"/>
+  <text x="68" y="202" fill="#2D3748" font-size="12">Our organization enforces role-based access control (RBAC) across all systems. Access is provisioned through a centralized</text>
+  <text x="68" y="218" fill="#2D3748" font-size="12">identity provider (Okta) with quarterly access reviews. Least privilege is enforced via scoped permissions...</text>
+  <!-- Edit hint -->
+  <text x="740" y="228" fill="#A0AEC0" font-size="10">Click to edit</text>
+  
+  <!-- Evidence pills -->
+  <rect x="52" y="248" width="100" height="22" rx="11" fill="#EBF4FF"/>
+  <text x="64" y="263" fill="#4299E1" font-size="10">📄 IAM Policy</text>
+  <rect x="160" y="248" width="120" height="22" rx="11" fill="#EBF4FF"/>
+  <text x="172" y="263" fill="#4299E1" font-size="10">📄 Access Review SOP</text>
+  <rect x="288" y="248" width="80" height="22" rx="11" fill="#EBF4FF"/>
+  <text x="300" y="263" fill="#4299E1" font-size="10">📄 Okta Config</text>
+
+  <!-- Q&A Item 2 -->
+  <rect x="32" y="296" width="820" height="145" rx="8" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="44" y="308" width="28" height="28" rx="14" fill="#ECC94B"/>
+  <text x="52" y="327" fill="white" font-size="12" font-weight="600">2</text>
+  <text x="82" y="326" fill="#2D3748" font-size="13" font-weight="600">How do you manage encryption at rest and in transit for customer data?</text>
+  <rect x="700" y="308" width="72" height="22" rx="4" fill="#FEFCBF"/>
+  <text x="708" y="323" fill="#975A16" font-size="11" font-weight="600">78% match</text>
+  
+  <rect x="52" y="342" width="788" height="58" rx="4" fill="#F7FAFC" stroke="#CBD5E0" stroke-width="1"/>
+  <text x="68" y="362" fill="#2D3748" font-size="12">All customer data is encrypted at rest using AES-256 encryption. Data in transit is protected via TLS 1.2+ for all</text>
+  <text x="68" y="378" fill="#2D3748" font-size="12">internal and external communications. Encryption keys are managed through AWS KMS with automatic rotation...</text>
+  <text x="740" y="388" fill="#A0AEC0" font-size="10">Click to edit</text>
+  
+  <rect x="52" y="408" width="110" height="22" rx="11" fill="#EBF4FF"/>
+  <text x="64" y="423" fill="#4299E1" font-size="10">📄 KMS Config</text>
+  <rect x="170" y="408" width="100" height="22" rx="11" fill="#EBF4FF"/>
+  <text x="182" y="423" fill="#4299E1" font-size="10">📄 TLS Cert</text>
+
+  <!-- Q&A Item 3 -->
+  <rect x="32" y="456" width="820" height="145" rx="8" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="44" y="468" width="28" height="28" rx="14" fill="#FC8181"/>
+  <text x="52" y="487" fill="white" font-size="12" font-weight="600">3</text>
+  <text x="82" y="486" fill="#2D3748" font-size="13" font-weight="600">Describe your incident response process and escalation procedures.</text>
+  <rect x="700" y="468" width="72" height="22" rx="4" fill="#FED7D7"/>
+  <text x="708" y="483" fill="#C53030" font-size="11" font-weight="600">52% match</text>
+  
+  <rect x="52" y="502" width="788" height="58" rx="4" fill="#FFFAF0" stroke="#FBBF6A" stroke-width="1"/>
+  <text x="68" y="522" fill="#4A5568" font-size="12" font-style="italic">Low confidence — manual review recommended. Partial evidence found in incident response runbook...</text>
+  <text x="740" y="548" fill="#A0AEC0" font-size="10">Click to edit</text>
+  
+  <rect x="52" y="568" width="130" height="22" rx="11" fill="#EBF4FF"/>
+  <text x="64" y="583" fill="#4299E1" font-size="10">📄 IR Runbook (draft)</text>
+  
+  <!-- Needs review badge -->
+  <rect x="710" y="568" width="120" height="22" rx="11" fill="#FED7D7"/>
+  <text x="718" y="583" fill="#C53030" font-size="10" font-weight="600">⚠ Needs Review</text>
+
+  <!-- Sidebar: Relevant Evidence -->
+  <rect x="872" y="116" width="376" height="770" rx="8" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="892" y="148" fill="#2D3748" font-size="15" font-weight="600">Relevant Evidence</text>
+  <text x="1200" y="148" fill="#A0AEC0" font-size="12">12 docs</text>
+  
+  <!-- Search -->
+  <rect x="892" y="162" width="336" height="34" rx="6" fill="#F7FAFC" stroke="#CBD5E0" stroke-width="1"/>
+  <text x="912" y="183" fill="#A0AEC0" font-size="12">Search evidence...</text>
+  
+  <!-- Evidence Doc 1 -->
+  <rect x="892" y="210" width="336" height="72" rx="6" fill="#F7FAFC" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="908" y="222" width="32" height="32" rx="4" fill="#EBF4FF"/>
+  <text x="916" y="243" fill="#4299E1" font-size="14">📄</text>
+  <text x="952" y="236" fill="#2D3748" font-size="12" font-weight="500">IAM Policy Document</text>
+  <text x="952" y="254" fill="#A0AEC0" font-size="11">GitHub · Updated 2 days ago</text>
+  <rect x="952" y="262" width="44" height="16" rx="8" fill="#C6F6D5"/>
+  <text x="958" y="273" fill="#276749" font-size="9">SOC 2</text>
+  <rect x="1002" y="262" width="32" height="16" rx="8" fill="#E6FFFA"/>
+  <text x="1008" y="273" fill="#38B2AC" font-size="9">RBAC</text>
+  
+  <!-- Evidence Doc 2 -->
+  <rect x="892" y="294" width="336" height="72" rx="6" fill="#F7FAFC" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="908" y="306" width="32" height="32" rx="4" fill="#E6FFFA"/>
+  <text x="916" y="327" fill="#38B2AC" font-size="14">📄</text>
+  <text x="952" y="320" fill="#2D3748" font-size="12" font-weight="500">Access Review SOP</text>
+  <text x="952" y="338" fill="#A0AEC0" font-size="11">Google Drive · Updated 1 week ago</text>
+  <rect x="952" y="346" width="44" height="16" rx="8" fill="#C6F6D5"/>
+  <text x="958" y="357" fill="#276749" font-size="9">SOC 2</text>
+  
+  <!-- Evidence Doc 3 -->
+  <rect x="892" y="378" width="336" height="72" rx="6" fill="#F7FAFC" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="908" y="390" width="32" height="32" rx="4" fill="#FAF5FF"/>
+  <text x="916" y="411" fill="#9F7AEA" font-size="14">📄</text>
+  <text x="952" y="404" fill="#2D3748" font-size="12" font-weight="500">KMS Encryption Config</text>
+  <text x="952" y="422" fill="#A0AEC0" font-size="11">AWS Config · Updated 3 days ago</text>
+  <rect x="952" y="430" width="44" height="16" rx="8" fill="#EBF4FF"/>
+  <text x="958" y="441" fill="#4299E1" font-size="9">PCI</text>
+  <rect x="1002" y="430" width="60" height="16" rx="8" fill="#EBF4FF"/>
+  <text x="1008" y="441" fill="#4299E1" font-size="9">Encrypt</text>
+  
+  <!-- Evidence Doc 4 -->
+  <rect x="892" y="462" width="336" height="72" rx="6" fill="#F7FAFC" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="908" y="474" width="32" height="32" rx="4" fill="#FED7D7"/>
+  <text x="916" y="495" fill="#F56565" font-size="14">📄</text>
+  <text x="952" y="488" fill="#2D3748" font-size="12" font-weight="500">Incident Response Runbook</text>
+  <text x="952" y="506" fill="#A0AEC0" font-size="11">Jira · Updated 2 weeks ago</text>
+  <rect x="952" y="514" width="36" height="16" rx="8" fill="#FED7D7"/>
+  <text x="957" y="525" fill="#C53030" font-size="9">Draft</text>
+  
+  <!-- Evidence Doc 5 -->
+  <rect x="892" y="546" width="336" height="72" rx="6" fill="#F7FAFC" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="908" y="558" width="32" height="32" rx="4" fill="#EBF4FF"/>
+  <text x="916" y="579" fill="#4299E1" font-size="14">📄</text>
+  <text x="952" y="572" fill="#2D3748" font-size="12" font-weight="500">Okta SSO Configuration</text>
+  <text x="952" y="590" fill="#A0AEC0" font-size="11">Manual Upload · Updated 5 days ago</text>
+  <rect x="952" y="598" width="44" height="16" rx="8" fill="#C6F6D5"/>
+  <text x="958" y="609" fill="#276749" font-size="9">SOC 2</text>
+
+  <!-- Pagination hint -->
+  <text x="960" y="660" fill="#A0AEC0" font-size="12">Showing 5 of 12 documents</text>
+  <text x="1100" y="660" fill="#4299E1" font-size="12">Load more ↓</text>
+  
+  <!-- Legend at sidebar bottom -->
+  <rect x="892" y="690" width="336" height="170" rx="6" fill="#F7FAFC"/>
+  <text x="912" y="716" fill="#2D3748" font-size="12" font-weight="600">Confidence Levels</text>
+  <circle cx="920" cy="738" r="6" fill="#48BB78"/>
+  <text x="935" y="743" fill="#4A5568" font-size="11">High (90-100%) — Auto-approved</text>
+  <circle cx="920" cy="762" r="6" fill="#ECC94B"/>
+  <text x="935" y="767" fill="#4A5568" font-size="11">Medium (70-89%) — Review suggested</text>
+  <circle cx="920" cy="786" r="6" fill="#FC8181"/>
+  <text x="935" y="791" fill="#4A5568" font-size="11">Low (&lt;70%) — Manual review required</text>
+  
+  <line x1="912" y1="808" x2="1208" y2="808" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="912" y="830" fill="#2D3748" font-size="12" font-weight="600">Shortcuts</text>
+  <text x="912" y="850" fill="#A0AEC0" font-size="11">↑↓ Navigate questions  ·  Tab Next question  ·  Ctrl+S Save</text>
+</svg>

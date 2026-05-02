@@ -1,0 +1,251 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="900" viewBox="0 0 1280 900">
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+  </defs>
+  <rect width="1280" height="900" fill="#F7FAFC"/>
+  
+  <!-- Header -->
+  <rect width="1280" height="60" fill="#2D3748"/>
+  <text x="32" y="38" fill="white" font-size="20" font-weight="700">SecureResp</text>
+  <text x="480" y="38" fill="#A0AEC0" font-size="14">Dashboard</text>
+  <text x="580" y="38" fill="#CBD5E0" font-size="14">Questionnaires</text>
+  <text x="720" y="38" fill="#A0AEC0" font-size="14">Evidence</text>
+  <text x="810" y="38" fill="#A0AEC0" font-size="14">Sources</text>
+  <text x="890" y="38" fill="#A0AEC0" font-size="14">Settings</text>
+  <circle cx="1230" cy="30" r="18" fill="#4299E1"/>
+  <text x="1224" y="35" fill="white" font-size="14" font-weight="600">JD</text>
+
+  <!-- Title -->
+  <text x="32" y="100" fill="#2D3748" font-size="24" font-weight="700">Questionnaire History</text>
+  <text x="32" y="122" fill="#A0AEC0" font-size="13">Complete archive of all security questionnaires with status tracking.</text>
+  
+  <!-- New questionnaire button -->
+  <rect x="1100" y="78" width="148" height="36" rx="6" fill="#4299E1"/>
+  <text x="1120" y="101" fill="white" font-size="13" font-weight="600">+ New Questionnaire</text>
+
+  <!-- Filter Bar -->
+  <rect x="32" y="142" width="1216" height="50" rx="8" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+  
+  <!-- Status filter -->
+  <rect x="48" y="152" width="110" height="30" rx="6" fill="white" stroke="#CBD5E0" stroke-width="1"/>
+  <text x="68" y="172" fill="#4A5568" font-size="12">All Status ▾</text>
+  
+  <!-- Date range -->
+  <rect x="170" y="152" width="140" height="30" rx="6" fill="white" stroke="#CBD5E0" stroke-width="1"/>
+  <text x="190" y="172" fill="#4A5568" font-size="12">Date Range ▾</text>
+  
+  <!-- Customer filter -->
+  <rect x="322" y="152" width="130" height="30" rx="6" fill="white" stroke="#CBD5E0" stroke-width="1"/>
+  <text x="342" y="172" fill="#4A5568" font-size="12">Customer ▾</text>
+  
+  <!-- Framework filter -->
+  <rect x="464" y="152" width="130" height="30" rx="6" fill="white" stroke="#CBD5E0" stroke-width="1"/>
+  <text x="484" y="172" fill="#4A5568" font-size="12">Framework ▾</text>
+  
+  <!-- Search -->
+  <rect x="880" y="152" width="352" height="30" rx="6" fill="#F7FAFC" stroke="#CBD5E0" stroke-width="1"/>
+  <text x="904" y="172" fill="#A0AEC0" font-size="12">Search questionnaires...</text>
+  
+  <!-- Active filter chips -->
+  <rect x="48" y="204" width="60" height="22" rx="11" fill="#EBF4FF"/>
+  <text x="60" y="219" fill="#4299E1" font-size="10">SOC 2</text>
+  <rect x="116" y="204" width="72" height="22" rx="11" fill="#C6F6D5"/>
+  <text x="124" y="219" fill="#276749" font-size="10">Completed</text>
+  <text x="200" y="219" fill="#A0AEC0" font-size="11">Clear filters</text>
+
+  <!-- Table -->
+  <rect x="32" y="240" width="1216" height="52" rx="0" fill="#F7FAFC"/>
+  <text x="52" y="271" fill="#A0AEC0" font-size="11" font-weight="600">CUSTOMER</text>
+  <text x="260" y="271" fill="#A0AEC0" font-size="11" font-weight="600">FRAMEWORK</text>
+  <text x="420" y="271" fill="#A0AEC0" font-size="11" font-weight="600">STATUS</text>
+  <text x="560" y="271" fill="#A0AEC0" font-size="11" font-weight="600">COMPLETION</text>
+  <text x="720" y="271" fill="#A0AEC0" font-size="11" font-weight="600">SUBMITTED</text>
+  <text x="860" y="271" fill="#A0AEC0" font-size="11" font-weight="600">DUE DATE</text>
+  <text x="1000" y="271" fill="#A0AEC0" font-size="11" font-weight="600">ACTIONS</text>
+  <line x1="32" y1="292" x2="1248" y2="292" stroke="#E2E8F0" stroke-width="1"/>
+
+  <!-- Row 1: Completed -->
+  <rect x="32" y="292" width="1216" height="52" fill="white"/>
+  <text x="52" y="323" fill="#2D3748" font-size="13" font-weight="500">Acme Corp</text>
+  <rect x="260" y="309" width="52" height="20" rx="10" fill="#EBF4FF"/>
+  <text x="270" y="323" fill="#4299E1" font-size="10">SOC 2</text>
+  <rect x="420" y="309" width="80" height="20" rx="10" fill="#C6F6D5"/>
+  <text x="432" y="323" fill="#276749" font-size="10" font-weight="600">Completed</text>
+  <rect x="560" y="318" width="100" height="6" rx="3" fill="#E2E8F0"/>
+  <rect x="560" y="318" width="100" height="6" rx="3" fill="#48BB78"/>
+  <text x="670" y="323" fill="#48BB78" font-size="11">100%</text>
+  <text x="720" y="323" fill="#4A5568" font-size="12">Apr 12, 2026</text>
+  <text x="860" y="323" fill="#4A5568" font-size="12">Apr 15, 2026</text>
+  <text x="1000" y="323" fill="#4299E1" font-size="11">View</text>
+  <text x="1040" y="323" fill="#A0AEC0" font-size="11">·</text>
+  <text x="1055" y="323" fill="#4299E1" font-size="11">Duplicate</text>
+  <text x="1115" y="323" fill="#A0AEC0" font-size="11">·</text>
+  <text x="1130" y="323" fill="#4299E1" font-size="11">Export</text>
+  <line x1="32" y1="344" x2="1248" y2="344" stroke="#E2E8F0" stroke-width="1"/>
+
+  <!-- Row 2: In Review -->
+  <rect x="32" y="344" width="1216" height="52" fill="#FAFAFA"/>
+  <text x="52" y="375" fill="#2D3748" font-size="13" font-weight="500">GlobalBank Ltd</text>
+  <rect x="260" y="361" width="60" height="20" rx="10" fill="#FAF5FF"/>
+  <text x="268" y="375" fill="#9F7AEA" font-size="10">PCI DSS</text>
+  <rect x="420" y="361" width="68" height="20" rx="10" fill="#FEFCBF"/>
+  <text x="430" y="375" fill="#975A16" font-size="10" font-weight="600">In Review</text>
+  <rect x="560" y="370" width="100" height="6" rx="3" fill="#E2E8F0"/>
+  <rect x="560" y="370" width="75" height="6" rx="3" fill="#ECC94B"/>
+  <text x="670" y="375" fill="#ECC94B" font-size="11">75%</text>
+  <text x="720" y="375" fill="#4A5568" font-size="12">Apr 28, 2026</text>
+  <text x="860" y="375" fill="#4A5568" font-size="12">May 28, 2026</text>
+  <text x="1000" y="375" fill="#4299E1" font-size="11">View</text>
+  <text x="1040" y="375" fill="#A0AEC0" font-size="11">·</text>
+  <text x="1055" y="375" fill="#4299E1" font-size="11">Duplicate</text>
+  <text x="1115" y="375" fill="#A0AEC0" font-size="11">·</text>
+  <text x="1130" y="375" fill="#4299E1" font-size="11">Export</text>
+  <line x1="32" y1="396" x2="1248" y2="396" stroke="#E2E8F0" stroke-width="1"/>
+
+  <!-- Row 3: Processing -->
+  <rect x="32" y="396" width="1216" height="52" fill="white"/>
+  <text x="52" y="427" fill="#2D3748" font-size="13" font-weight="500">TechStart Inc</text>
+  <rect x="260" y="413" width="36" height="20" rx="10" fill="#E6FFFA"/>
+  <text x="268" y="427" fill="#38B2AC" font-size="10">ISO</text>
+  <rect x="420" y="413" width="80" height="20" rx="10" fill="#C6F6D5"/>
+  <text x="430" y="427" fill="#276749" font-size="10" font-weight="600">Processing</text>
+  <rect x="560" y="422" width="100" height="6" rx="3" fill="#E2E8F0"/>
+  <rect x="560" y="422" width="35" height="6" rx="3" fill="#4299E1"/>
+  <text x="670" y="427" fill="#4299E1" font-size="11">35%</text>
+  <text x="720" y="427" fill="#4A5568" font-size="12">May 1, 2026</text>
+  <text x="860" y="427" fill="#4A5568" font-size="12">May 20, 2026</text>
+  <text x="1000" y="427" fill="#4299E1" font-size="11">View</text>
+  <text x="1040" y="427" fill="#A0AEC0" font-size="11">·</text>
+  <text x="1055" y="427" fill="#A0AEC0" font-size="11" opacity="0.5">Duplicate</text>
+  <text x="1115" y="427" fill="#A0AEC0" font-size="11">·</text>
+  <text x="1130" y="427" fill="#A0AEC0" font-size="11" opacity="0.5">Export</text>
+  <line x1="32" y1="448" x2="1248" y2="448" stroke="#E2E8F0" stroke-width="1"/>
+
+  <!-- Row 4: Completed -->
+  <rect x="32" y="448" width="1216" height="52" fill="#FAFAFA"/>
+  <text x="52" y="479" fill="#2D3748" font-size="13" font-weight="500">DataFlow AI</text>
+  <rect x="260" y="465" width="44" height="20" rx="10" fill="#EBF4FF"/>
+  <text x="268" y="479" fill="#4299E1" font-size="10">GDPR</text>
+  <rect x="420" y="465" width="80" height="20" rx="10" fill="#C6F6D5"/>
+  <text x="432" y="479" fill="#276749" font-size="10" font-weight="600">Completed</text>
+  <rect x="560" y="474" width="100" height="6" rx="3" fill="#E2E8F0"/>
+  <rect x="560" y="474" width="100" height="6" rx="3" fill="#48BB78"/>
+  <text x="670" y="479" fill="#48BB78" font-size="11">100%</text>
+  <text x="720" y="479" fill="#4A5568" font-size="12">Mar 20, 2026</text>
+  <text x="860" y="479" fill="#4A5568" font-size="12">Mar 25, 2026</text>
+  <text x="1000" y="479" fill="#4299E1" font-size="11">View</text>
+  <text x="1040" y="479" fill="#A0AEC0" font-size="11">·</text>
+  <text x="1055" y="479" fill="#4299E1" font-size="11">Duplicate</text>
+  <text x="1115" y="479" fill="#A0AEC0" font-size="11">·</text>
+  <text x="1130" y="479" fill="#4299E1" font-size="11">Export</text>
+  <line x1="32" y1="500" x2="1248" y2="500" stroke="#E2E8F0" stroke-width="1"/>
+
+  <!-- Row 5: Draft -->
+  <rect x="32" y="500" width="1216" height="52" fill="white"/>
+  <text x="52" y="531" fill="#2D3748" font-size="13" font-weight="500">CloudNative SaaS</text>
+  <rect x="260" y="517" width="52" height="20" rx="10" fill="#EBF4FF"/>
+  <text x="270" y="531" fill="#4299E1" font-size="10">SOC 2</text>
+  <rect x="420" y="517" width="48" height="20" rx="10" fill="#FED7D7"/>
+  <text x="430" y="531" fill="#C53030" font-size="10" font-weight="600">Draft</text>
+  <rect x="560" y="526" width="100" height="6" rx="3" fill="#E2E8F0"/>
+  <rect x="560" y="526" width="10" height="6" rx="3" fill="#F56565"/>
+  <text x="670" y="531" fill="#F56565" font-size="11">10%</text>
+  <text x="720" y="531" fill="#A0AEC0" font-size="12">—</text>
+  <text x="860" y="531" fill="#4A5568" font-size="12">Jun 5, 2026</text>
+  <text x="1000" y="531" fill="#4299E1" font-size="11">View</text>
+  <text x="1040" y="531" fill="#A0AEC0" font-size="11">·</text>
+  <text x="1055" y="531" fill="#4299E1" font-size="11">Duplicate</text>
+  <text x="1115" y="531" fill="#A0AEC0" font-size="11">·</text>
+  <text x="1130" y="531" fill="#F56565" font-size="11">Delete</text>
+  <line x1="32" y1="552" x2="1248" y2="552" stroke="#E2E8F0" stroke-width="1"/>
+
+  <!-- Row 6: Completed -->
+  <rect x="32" y="552" width="1216" height="52" fill="#FAFAFA"/>
+  <text x="52" y="583" fill="#2D3748" font-size="13" font-weight="500">SecureNet Corp</text>
+  <rect x="260" y="569" width="60" height="20" rx="10" fill="#FAF5FF"/>
+  <text x="268" y="583" fill="#9F7AEA" font-size="10">PCI DSS</text>
+  <rect x="420" y="569" width="80" height="20" rx="10" fill="#C6F6D5"/>
+  <text x="432" y="583" fill="#276749" font-size="10" font-weight="600">Completed</text>
+  <rect x="560" y="578" width="100" height="6" rx="3" fill="#E2E8F0"/>
+  <rect x="560" y="578" width="100" height="6" rx="3" fill="#48BB78"/>
+  <text x="670" y="583" fill="#48BB78" font-size="11">100%</text>
+  <text x="720" y="583" fill="#4A5568" font-size="12">Feb 14, 2026</text>
+  <text x="860" y="583" fill="#4A5568" font-size="12">Feb 20, 2026</text>
+  <text x="1000" y="583" fill="#4299E1" font-size="11">View</text>
+  <text x="1040" y="583" fill="#A0AEC0" font-size="11">·</text>
+  <text x="1055" y="583" fill="#4299E1" font-size="11">Duplicate</text>
+  <text x="1115" y="583" fill="#A0AEC0" font-size="11">·</text>
+  <text x="1130" y="583" fill="#4299E1" font-size="11">Export</text>
+  <line x1="32" y1="604" x2="1248" y2="604" stroke="#E2E8F0" stroke-width="1"/>
+
+  <!-- Row 7: Exported -->
+  <rect x="32" y="604" width="1216" height="52" fill="white"/>
+  <text x="52" y="635" fill="#2D3748" font-size="13" font-weight="500">MicroScale IoT</text>
+  <rect x="260" y="621" width="52" height="20" rx="10" fill="#EBF4FF"/>
+  <text x="270" y="635" fill="#4299E1" font-size="10">SOC 2</text>
+  <rect x="420" y="621" width="72" height="20" rx="10" fill="#E9D8FD"/>
+  <text x="430" y="635" fill="#6B46C1" font-size="10" font-weight="600">Exported</text>
+  <rect x="560" y="630" width="100" height="6" rx="3" fill="#E2E8F0"/>
+  <rect x="560" y="630" width="100" height="6" rx="3" fill="#9F7AEA"/>
+  <text x="670" y="635" fill="#9F7AEA" font-size="11">100%</text>
+  <text x="720" y="635" fill="#4A5568" font-size="12">Jan 30, 2026</text>
+  <text x="860" y="635" fill="#4A5568" font-size="12">Feb 5, 2026</text>
+  <text x="1000" y="635" fill="#4299E1" font-size="11">View</text>
+  <text x="1040" y="635" fill="#A0AEC0" font-size="11">·</text>
+  <text x="1055" y="635" fill="#4299E1" font-size="11">Duplicate</text>
+  <text x="1115" y="635" fill="#A0AEC0" font-size="11">·</text>
+  <text x="1130" y="635" fill="#4299E1" font-size="11">Export</text>
+  <line x1="32" y1="656" x2="1248" y2="656" stroke="#E2E8F0" stroke-width="1"/>
+
+  <!-- Row 8: Completed -->
+  <rect x="32" y="656" width="1216" height="52" fill="#FAFAFA"/>
+  <text x="52" y="687" fill="#2D3748" font-size="13" font-weight="500">FinServ Partners</text>
+  <rect x="260" y="673" width="44" height="20" rx="10" fill="#EBF4FF"/>
+  <text x="268" y="687" fill="#4299E1" font-size="10">GDPR</text>
+  <rect x="420" y="673" width="80" height="20" rx="10" fill="#C6F6D5"/>
+  <text x="432" y="687" fill="#276749" font-size="10" font-weight="600">Completed</text>
+  <rect x="560" y="682" width="100" height="6" rx="3" fill="#E2E8F0"/>
+  <rect x="560" y="682" width="100" height="6" rx="3" fill="#48BB78"/>
+  <text x="670" y="687" fill="#48BB78" font-size="11">100%</text>
+  <text x="720" y="687" fill="#4A5568" font-size="12">Jan 15, 2026</text>
+  <text x="860" y="687" fill="#4A5568" font-size="12">Jan 22, 2026</text>
+  <text x="1000" y="687" fill="#4299E1" font-size="11">View</text>
+  <text x="1040" y="687" fill="#A0AEC0" font-size="11">·</text>
+  <text x="1055" y="687" fill="#4299E1" font-size="11">Duplicate</text>
+  <text x="1115" y="687" fill="#A0AEC0" font-size="11">·</text>
+  <text x="1130" y="687" fill="#4299E1" font-size="11">Export</text>
+
+  <!-- Pagination -->
+  <rect x="32" y="730" width="1216" height="44" rx="6" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="52" y="757" fill="#A0AEC0" font-size="12">Showing 1-8 of 148 questionnaires</text>
+  <rect x="1020" y="740" width="32" height="24" rx="4" fill="white" stroke="#CBD5E0" stroke-width="1"/>
+  <text x="1033" y="757" fill="#4A5568" font-size="11">‹</text>
+  <rect x="1058" y="740" width="32" height="24" rx="4" fill="#4299E1"/>
+  <text x="1071" y="757" fill="white" font-size="11">1</text>
+  <rect x="1096" y="740" width="32" height="24" rx="4" fill="white" stroke="#CBD5E0" stroke-width="1"/>
+  <text x="1109" y="757" fill="#4A5568" font-size="11">2</text>
+  <rect x="1134" y="740" width="32" height="24" rx="4" fill="white" stroke="#CBD5E0" stroke-width="1"/>
+  <text x="1147" y="757" fill="#4A5568" font-size="11">3</text>
+  <text x="1174" y="757" fill="#A0AEC0" font-size="11">...</text>
+  <rect x="1192" y="740" width="48" height="24" rx="4" fill="white" stroke="#CBD5E0" stroke-width="1"/>
+  <text x="1205" y="757" fill="#4A5568" font-size="11">19</text>
+  <rect x="1248" y="740" width="32" height="24" rx="4" fill="white" stroke="#CBD5E0" stroke-width="1"/>
+  <text x="1261" y="757" fill="#4A5568" font-size="11">›</text>
+  
+  <!-- Status legend -->
+  <rect x="32" y="790" width="1216" height="44" rx="6" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+  <circle cx="60" cy="812" r="6" fill="#48BB78"/>
+  <text x="72" y="816" fill="#4A5568" font-size="11">Completed (62)</text>
+  <circle cx="180" cy="812" r="6" fill="#ECC94B"/>
+  <text x="192" y="816" fill="#4A5568" font-size="11">In Review (12)</text>
+  <circle cx="310" cy="812" r="6" fill="#4299E1"/>
+  <text x="322" y="816" fill="#4A5568" font-size="11">Processing (8)</text>
+  <circle cx="440" cy="812" r="6" fill="#9F7AEA"/>
+  <text x="452" y="816" fill="#4A5568" font-size="11">Exported (45)</text>
+  <circle cx="560" cy="812" r="6" fill="#F56565"/>
+  <text x="572" y="816" fill="#4A5568" font-size="11">Draft (3)</text>
+  <circle cx="660" cy="812" r="6" fill="#A0AEC0"/>
+  <text x="672" y="816" fill="#4A5568" font-size="11">Archived (18)</text>
+</svg>
