@@ -164,4 +164,65 @@ describe("BrandedShell", () => {
     const name = container.querySelector(".tracking-brand-name") as HTMLElement | null;
     expect(name?.style.color).toBe("rgb(255, 0, 0)");
   });
+
+  it("applies primary color to ShipLens powered-by text", () => {
+    const { container } = render(
+      <BrandedShell primaryColor="#00ff00">
+        <span>child</span>
+      </BrandedShell>
+    );
+    const poweredBy = container.querySelector(".tracking-footer-powered span") as HTMLElement | null;
+    expect(poweredBy?.style.color).toBe("rgb(0, 255, 0)");
+  });
+
+  it("uses CSS var as default when primaryColor is null", () => {
+    const { container } = render(
+      <BrandedShell primaryColor={null}>
+        <span>child</span>
+      </BrandedShell>
+    );
+    const header = container.querySelector("header") as HTMLElement | null;
+    expect(header?.style.borderColor).toBe("var(--color-primary)");
+  });
+
+  it("does not render contact info when all are null", () => {
+    const { container } = render(
+      <BrandedShell contactEmail={null} contactPhone={null} supportUrl={null}>
+        <span>child</span>
+      </BrandedShell>
+    );
+    expect(container.querySelector(".tracking-footer-link")).toBeNull();
+  });
+
+  it("does not render custom footer text when null", () => {
+    const { container } = render(
+      <BrandedShell customFooterText={null}>
+        <span>child</span>
+      </BrandedShell>
+    );
+    expect(container.querySelector(".tracking-footer-custom")).toBeNull();
+  });
+
+  it("renders logo alt text as tenantName", () => {
+    const { container } = render(
+      <BrandedShell tenantName="CoolBrand" logoUrl="https://example.com/logo.png">
+        <span>child</span>
+      </BrandedShell>
+    );
+    const img = container.querySelector("img");
+    expect(img?.getAttribute("alt")).toBe("CoolBrand");
+  });
+
+  it("renders multiple children in main element", () => {
+    const { getByText, container } = render(
+      <BrandedShell>
+        <p>Child A</p>
+        <p>Child B</p>
+      </BrandedShell>
+    );
+    expect(getByText("Child A")).toBeDefined();
+    expect(getByText("Child B")).toBeDefined();
+    const main = container.querySelector("main");
+    expect(main).not.toBeNull();
+  });
 });

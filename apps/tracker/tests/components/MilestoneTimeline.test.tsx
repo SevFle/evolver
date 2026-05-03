@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { render } from "@testing-library/react";
 import { MilestoneTimeline } from "../../src/components/MilestoneTimeline";
 import type { TrackingMilestone } from "../../src/lib/tracking-api";
@@ -196,5 +196,106 @@ describe("MilestoneTimeline", () => {
     const items = container.querySelectorAll(".milestone-item");
     const lastItem = items[items.length - 1];
     expect(lastItem.querySelector(".milestone-line")).toBeNull();
+  });
+
+  describe("date formatting error handling", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("falls back to raw date string when toLocaleDateString throws", () => {
+      const spy = vi.spyOn(Date.prototype, "toLocaleDateString").mockImplementation(() => {
+        throw new Error("locale error");
+      });
+      const { getByText } = render(
+        <MilestoneTimeline
+          milestones={[
+            {
+              type: "picked_up",
+              description: "Test",
+              occurredAt: "not-a-date",
+            },
+          ]}
+        />
+      );
+      expect(getByText("not-a-date", { exact: false })).toBeDefined();
+      spy.mockRestore();
+    });
+
+    it("handles toLocaleTimeString returning empty gracefully", () => {
+      const spy = vi.spyOn(Date.prototype, "toLocaleTimeString").mockImplementation(() => {
+        throw new Error("locale error");
+      });
+      const { container } = render(
+        <MilestoneTimeline
+          milestones={[
+            {
+              type: "picked_up",
+              occurredAt: "2025-01-15T10:00:00Z",
+            },
+          ]}
+        />
+      );
+      const timeSpan = container.querySelector(".milestone-time");
+      expect(timeSpan).not.toBeNull();
+      spy.mockRestore();
+    });
+  });
+
+  it("applies completed dot class on delivered milestone that is not first", () => {
+    const { container } = render(
+      <MilestoneTimeline
+        milestones={[
+          {
+            type: "picked_up",
+            description: "Picked up",
+            occurredAt: "2025-01-15T10:00:00Z",
+          },
+          {
+            type: "delivered",
+            description: "Delivered",
+            occurredAt: "2025-01-20T10:00:00Z",
+          },
+        ]}
+      />
+    );
+    const dots = container.querySelectorAll(".milestone-dot");
+    expect(dots[1].classList.contains("milestone-dot-completed")).toBe(true);
+  });
+
+  it("applies brand color to delivered milestone dot", () => {
+    const { container } = render(
+      <MilestoneTimeline
+        milestones={[
+          {
+            type: "picked_up",
+            description: "Picked up",
+            occurredAt: "2025-01-15T10:00:00Z",
+          },
+          {
+            type: "delivered",
+            description: "Delivered",
+            occurredAt: "2025-01-20T10:00:00Z",
+          },
+        ]}
+        primaryColor="#00ff00"
+      />
+    );
+    const completedDot = container.querySelectorAll(".milestone-dot")[1] as HTMLElement;
+    expect(completedDot.style.backgroundColor).toBe("rgb(0, 255, 0)");
+  });
+
+  it("renders without primaryColor (defaults to CSS var)", () => {
+    const { container } = render(
+      <MilestoneTimeline milestones={milestones} />
+    );
+    const latestDot = container.querySelector(".milestone-dot-latest") as HTMLElement | null;
+    expect(latestDot?.style.backgroundColor).toBe("var(--color-primary)");
+  });
+
+  it("renders time with middot separator when time is present", () => {
+    const { container } = render(<MilestoneTimeline milestones={milestones} />);
+    const timeSpans = container.querySelectorAll(".milestone-time");
+    expect(timeSpans[0].innerHTML).toContain("·");
   });
 });

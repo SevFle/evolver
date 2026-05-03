@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { render } from "@testing-library/react";
 import { ShipmentHeader } from "../../src/components/ShipmentHeader";
 import type { TrackingPageData } from "../../src/lib/tracking-api";
@@ -159,5 +159,101 @@ describe("ShipmentHeader", () => {
     const { container } = render(<ShipmentHeader shipment={baseShipment} />);
     const svg = container.querySelector(".shipment-route-line svg");
     expect(svg).not.toBeNull();
+  });
+
+  it("renders status-active class for in_transit", () => {
+    const { container } = render(<ShipmentHeader shipment={baseShipment} />);
+    const badge = container.querySelector(".shipment-status-badge") as HTMLElement | null;
+    expect(badge?.classList.contains("status-active")).toBe(true);
+  });
+
+  it("renders status-active class for out_for_delivery", () => {
+    const { container } = render(
+      <ShipmentHeader shipment={{ ...baseShipment, status: "out_for_delivery" }} />
+    );
+    const badge = container.querySelector(".shipment-status-badge") as HTMLElement | null;
+    expect(badge?.classList.contains("status-active")).toBe(true);
+  });
+
+  it("renders status-active class for at_port", () => {
+    const { container } = render(
+      <ShipmentHeader shipment={{ ...baseShipment, status: "at_port" }} />
+    );
+    const badge = container.querySelector(".shipment-status-badge") as HTMLElement | null;
+    expect(badge?.classList.contains("status-active")).toBe(true);
+  });
+
+  it("renders status-default class for unknown status", () => {
+    const { container } = render(
+      <ShipmentHeader shipment={{ ...baseShipment, status: "pending" }} />
+    );
+    const badge = container.querySelector(".shipment-status-badge") as HTMLElement | null;
+    expect(badge?.classList.contains("status-default")).toBe(true);
+  });
+
+  it("does not render estimated delivery when null and no actual delivery", () => {
+    const { queryByText } = render(
+      <ShipmentHeader
+        shipment={{ ...baseShipment, estimatedDelivery: null }}
+      />
+    );
+    expect(queryByText("Est. Delivery")).toBeNull();
+    expect(queryByText("Delivered")).toBeNull();
+  });
+
+  it("does not render service type when null", () => {
+    const { queryByText } = render(
+      <ShipmentHeader shipment={{ ...baseShipment, serviceType: null }} />
+    );
+    expect(queryByText("Service")).toBeNull();
+  });
+
+  it("does not render reference when null", () => {
+    const { queryByText } = render(
+      <ShipmentHeader shipment={{ ...baseShipment, reference: null }} />
+    );
+    expect(queryByText("Reference")).toBeNull();
+  });
+
+  it("does not render created date when null", () => {
+    const { queryByText } = render(
+      <ShipmentHeader shipment={{ ...baseShipment, createdAt: null }} />
+    );
+    expect(queryByText("Created")).toBeNull();
+  });
+
+  describe("date formatting error handling", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("falls back to raw string when formatDate catches error", () => {
+      const spy = vi.spyOn(Date.prototype, "toLocaleDateString").mockImplementation(() => {
+        throw new Error("locale error");
+      });
+      const { getByText } = render(
+        <ShipmentHeader
+          shipment={{ ...baseShipment, estimatedDelivery: "bad-date-string" }}
+        />
+      );
+      expect(getByText("bad-date-string")).toBeDefined();
+      spy.mockRestore();
+    });
+  });
+
+  it("applies default color when primaryColor is null", () => {
+    const { container } = render(
+      <ShipmentHeader shipment={baseShipment} primaryColor={null} />
+    );
+    const badge = container.querySelector(".shipment-status-badge") as HTMLElement | null;
+    expect(badge?.style.backgroundColor).toBe("var(--color-primary)");
+  });
+
+  it("applies default color when primaryColor is omitted", () => {
+    const { container } = render(
+      <ShipmentHeader shipment={baseShipment} />
+    );
+    const badge = container.querySelector(".shipment-status-badge") as HTMLElement | null;
+    expect(badge?.style.backgroundColor).toBe("var(--color-primary)");
   });
 });
