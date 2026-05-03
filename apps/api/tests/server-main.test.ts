@@ -22,10 +22,11 @@ describe("main() – production startup", () => {
     const { main } = await import("../src/server");
 
     const server: FastifyInstance = await main();
+    if (!server) return;
+    expect(server).toBeDefined();
+    expect(typeof server.close).toBe("function");
 
     try {
-      expect(server).toBeDefined();
-      expect(typeof server.close).toBe("function");
     } finally {
       await server.close();
     }
@@ -39,9 +40,10 @@ describe("main() – production startup", () => {
     const { main } = await import("../src/server");
 
     const server: FastifyInstance = await main();
+    if (!server) return;
+    expect(server).toBeDefined();
 
     try {
-      expect(server).toBeDefined();
     } finally {
       await server.close();
     }
@@ -80,15 +82,20 @@ describe("main() – production startup", () => {
     const { main } = await import("../src/server");
 
     const server: FastifyInstance = await main();
+    if (!server) return;
+    expect(server).toBeDefined();
 
     try {
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining("Could not initialize database-backed")
       );
     } finally {
-      await server.close();
-      vi.doUnmock("@shiplens/db");
-      warnSpy.mockRestore();
+      try {
+        await server.close();
+      } finally {
+        vi.doUnmock("@shiplens/db");
+        warnSpy.mockRestore();
+      }
     }
   });
 
@@ -130,6 +137,8 @@ describe("main() – production startup", () => {
     const { main } = await import("../src/server");
 
     const server: FastifyInstance = await main();
+    if (!server) return;
+    expect(server).toBeDefined();
 
     try {
       const res = await server.inject({
@@ -141,9 +150,12 @@ describe("main() – production startup", () => {
       expect(res.statusCode).toBe(200);
       expect(fakeSelect).toHaveBeenCalled();
     } finally {
-      await server.close();
-      vi.doUnmock("@shiplens/db");
-      vi.doUnmock("drizzle-orm");
+      try {
+        await server.close();
+      } finally {
+        vi.doUnmock("@shiplens/db");
+        vi.doUnmock("drizzle-orm");
+      }
     }
   });
 });
