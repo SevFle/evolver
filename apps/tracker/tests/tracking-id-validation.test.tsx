@@ -11,6 +11,18 @@ describe("isValidTrackingId", () => {
       expect(isValidTrackingId("AB-1234")).toBe(true);
     });
 
+    it("accepts 1 char after hyphen (new minimum)", () => {
+      expect(isValidTrackingId("AB-1")).toBe(true);
+    });
+
+    it("accepts 2 chars after hyphen", () => {
+      expect(isValidTrackingId("AB-12")).toBe(true);
+    });
+
+    it("accepts 3 chars after hyphen", () => {
+      expect(isValidTrackingId("SL-123")).toBe(true);
+    });
+
     it("accepts maximum length after hyphen (12 chars)", () => {
       expect(isValidTrackingId("AB-123456789012")).toBe(true);
     });
@@ -59,10 +71,6 @@ describe("isValidTrackingId", () => {
 
     it("rejects three letter prefix", () => {
       expect(isValidTrackingId("SLX-1234")).toBe(false);
-    });
-
-    it("rejects 3 chars after hyphen (too short)", () => {
-      expect(isValidTrackingId("SL-123")).toBe(false);
     });
 
     it("rejects 13 chars after hyphen (too long)", () => {

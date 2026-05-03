@@ -8,6 +8,21 @@ import {
 
 const API_BASE = process.env.API_INTERNAL_URL ?? "http://localhost:3001";
 
+const PRIMARY_COLOR_REGEX = /^#[0-9a-fA-F]{6}$/;
+
+function sanitizeTextField(value: string | null | undefined): string | null {
+  if (value == null) return null;
+  return value.replace(/<[^>]*>/g, "");
+}
+
+function validatePrimaryColor(
+  color: string | null | undefined
+): string | null {
+  if (!color) return null;
+  if (!PRIMARY_COLOR_REGEX.test(color)) return null;
+  return color;
+}
+
 export interface TrackingMilestone {
   type: string;
   description?: string;
@@ -70,9 +85,14 @@ export async function getShipmentByTrackingId(
     if (data?.branding) {
       data.branding = {
         ...data.branding,
-        supportUrl: sanitizeSupportUrl(data.branding.supportUrl),
-        contactEmail: validateContactEmail(data.branding.contactEmail),
+        tenantName: sanitizeTextField(data.branding.tenantName) ?? data.branding.tenantName,
         logoUrl: validateLogoUrl(data.branding.logoUrl),
+        primaryColor: validatePrimaryColor(data.branding.primaryColor),
+        tagline: sanitizeTextField(data.branding.tagline),
+        contactEmail: validateContactEmail(data.branding.contactEmail),
+        contactPhone: sanitizeTextField(data.branding.contactPhone),
+        supportUrl: sanitizeSupportUrl(data.branding.supportUrl),
+        customFooterText: sanitizeTextField(data.branding.customFooterText),
       };
     }
 

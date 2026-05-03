@@ -1,4 +1,3 @@
-const DANGEROUS_PROTOCOLS = /^(javascript:|data:|vbscript:)/i;
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 export function sanitizeSupportUrl(
@@ -6,12 +5,11 @@ export function sanitizeSupportUrl(
 ): string | null {
   if (!url) return null;
   const trimmed = url.trim();
-  if (DANGEROUS_PROTOCOLS.test(trimmed)) return null;
   try {
     const parsed = new URL(trimmed);
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:")
       return null;
-    return trimmed;
+    return parsed.href;
   } catch {
     return null;
   }

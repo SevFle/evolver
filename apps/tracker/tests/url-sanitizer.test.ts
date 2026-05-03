@@ -18,15 +18,15 @@ describe("sanitizeSupportUrl", () => {
     expect(sanitizeSupportUrl("")).toBeNull();
   });
 
-  it("returns valid HTTPS URL", () => {
+  it("returns canonical HTTPS URL", () => {
     expect(sanitizeSupportUrl("https://help.example.com")).toBe(
-      "https://help.example.com"
+      "https://help.example.com/"
     );
   });
 
-  it("returns valid HTTP URL", () => {
+  it("returns canonical HTTP URL", () => {
     expect(sanitizeSupportUrl("http://help.example.com")).toBe(
-      "http://help.example.com"
+      "http://help.example.com/"
     );
   });
 
@@ -40,6 +40,16 @@ describe("sanitizeSupportUrl", () => {
 
   it("rejects vbscript: protocol", () => {
     expect(sanitizeSupportUrl("vbscript:msgbox")).toBeNull();
+  });
+
+  it("returns null for malformed URL", () => {
+    expect(sanitizeSupportUrl("not a url")).toBeNull();
+  });
+
+  it("returns canonical URL with path", () => {
+    expect(sanitizeSupportUrl("https://help.example.com/page")).toBe(
+      "https://help.example.com/page"
+    );
   });
 });
 
