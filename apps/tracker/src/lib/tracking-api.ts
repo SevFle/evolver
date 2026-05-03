@@ -1,4 +1,10 @@
 import { resolveTenantFromHost } from "./tenant-resolver";
+import { isValidTrackingId } from "./tracking-id-validation";
+import {
+  sanitizeSupportUrl,
+  validateContactEmail,
+  validateLogoUrl,
+} from "./url-sanitizer";
 
 const API_BASE = process.env.API_INTERNAL_URL ?? "http://localhost:3001";
 
@@ -39,6 +45,10 @@ export interface TrackingPageData {
 export async function getShipmentByTrackingId(
   trackingId: string
 ): Promise<TrackingPageData | null> {
+  if (!isValidTrackingId(trackingId)) {
+    return null;
+  }
+
   const tenantSlug = await resolveTenantFromHost();
 
   try {
@@ -55,7 +65,18 @@ export async function getShipmentByTrackingId(
     if (!res.ok) return null;
 
     const json = await res.json();
-    return json.data ?? null;
+    const data = json.data ?? null;
+
+    if (data?.branding) {
+      data.branding = {
+        ...data.branding,
+        supportUrl: sanitizeSupportUrl(data.branding.supportUrl),
+        contactEmail: validateContactEmail(data.branding.contactEmail),
+        logoUrl: validateLogoUrl(data.branding.logoUrl),
+      };
+    }
+
+    return data;
   } catch {
     return null;
   }

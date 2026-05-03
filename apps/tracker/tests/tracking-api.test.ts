@@ -34,7 +34,7 @@ describe("getShipmentByTrackingId", () => {
     const shipmentData = {
       success: true,
       data: {
-        trackingId: "SL-123",
+        trackingId: "SL-1234",
         origin: "Shanghai",
         destination: "LA",
         status: "in_transit",
@@ -54,11 +54,11 @@ describe("getShipmentByTrackingId", () => {
     const { getShipmentByTrackingId } = await import(
       "../src/lib/tracking-api"
     );
-    const result = await getShipmentByTrackingId("SL-123");
+    const result = await getShipmentByTrackingId("SL-1234");
 
     expect(result).toEqual(shipmentData.data);
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      expect.stringContaining("/api/tracking-pages/SL-123"),
+      expect.stringContaining("/api/tracking-pages/SL-1234"),
       expect.objectContaining({
         headers: expect.objectContaining({ "x-tenant-slug": "acme" }),
       })
@@ -76,7 +76,7 @@ describe("getShipmentByTrackingId", () => {
     const { getShipmentByTrackingId } = await import(
       "../src/lib/tracking-api"
     );
-    const result = await getShipmentByTrackingId("NOTFOUND");
+    const result = await getShipmentByTrackingId("NF-4040");
     expect(result).toBeNull();
   });
 
@@ -90,7 +90,7 @@ describe("getShipmentByTrackingId", () => {
     const { getShipmentByTrackingId } = await import(
       "../src/lib/tracking-api"
     );
-    const result = await getShipmentByTrackingId("SL-ERR");
+    const result = await getShipmentByTrackingId("SL-ERRO");
     expect(result).toBeNull();
   });
 
@@ -115,13 +115,13 @@ describe("getShipmentByTrackingId", () => {
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       json: () =>
-        Promise.resolve({ success: true, data: { trackingId: "SL-1" } }),
+        Promise.resolve({ success: true, data: { trackingId: "SL-1234" } }),
     });
 
     const { getShipmentByTrackingId } = await import(
       "../src/lib/tracking-api"
     );
-    await getShipmentByTrackingId("SL-1");
+    await getShipmentByTrackingId("SL-1234");
 
     const callArgs = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
       .calls[0];
@@ -135,38 +135,38 @@ describe("getShipmentByTrackingId", () => {
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       json: () =>
-        Promise.resolve({ success: true, data: { trackingId: "SL-1" } }),
+        Promise.resolve({ success: true, data: { trackingId: "SL-1234" } }),
     });
 
     const { getShipmentByTrackingId } = await import(
       "../src/lib/tracking-api"
     );
-    await getShipmentByTrackingId("SL-1");
+    await getShipmentByTrackingId("SL-1234");
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      "http://custom-api:4000/api/tracking-pages/SL-1",
+      "http://custom-api:4000/api/tracking-pages/SL-1234",
       expect.anything()
     );
 
     delete process.env.API_INTERNAL_URL;
   });
 
-  it("URL-encodes the tracking ID", async () => {
+  it("uses encodeURIComponent in URL construction", async () => {
     mockHeaders("acme.shiplens.io");
 
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       json: () =>
-        Promise.resolve({ success: true, data: { trackingId: "SL 123" } }),
+        Promise.resolve({ success: true, data: { trackingId: "SL-1234" } }),
     });
 
     const { getShipmentByTrackingId } = await import(
       "../src/lib/tracking-api"
     );
-    await getShipmentByTrackingId("SL 123");
+    await getShipmentByTrackingId("SL-1234");
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      expect.stringContaining("/api/tracking-pages/SL%20123"),
+      expect.stringContaining("/api/tracking-pages/SL-1234"),
       expect.anything()
     );
   });
@@ -217,5 +217,107 @@ describe("getShipmentByTrackingId", () => {
     expect(result?.trackingId).toBe("SL-FULL");
     expect(result?.milestones).toHaveLength(1);
     expect(result?.branding?.tenantName).toBe("Acme Forwarding");
+  });
+
+  it("returns null for invalid tracking ID format without calling fetch", async () => {
+    mockHeaders("acme.shiplens.io");
+
+    const { getShipmentByTrackingId } = await import(
+      "../src/lib/tracking-api"
+    );
+    const result = await getShipmentByTrackingId("invalid");
+
+    expect(result).toBeNull();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it("sanitizes javascript: URL in branding supportUrl", async () => {
+    mockHeaders("acme.shiplens.io");
+
+    const data = {
+      success: true,
+      data: {
+        trackingId: "SL-1234",
+        origin: "Shanghai",
+        destination: "LA",
+        status: "in_transit",
+        branding: {
+          tenantName: "Acme",
+          supportUrl: "javascript:alert(1)",
+        },
+      },
+    };
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(data),
+    });
+
+    const { getShipmentByTrackingId } = await import(
+      "../src/lib/tracking-api"
+    );
+    const result = await getShipmentByTrackingId("SL-1234");
+
+    expect(result?.branding?.supportUrl).toBeNull();
+  });
+
+  it("sanitizes invalid email in branding contactEmail", async () => {
+    mockHeaders("acme.shiplens.io");
+
+    const data = {
+      success: true,
+      data: {
+        trackingId: "SL-1234",
+        origin: "Shanghai",
+        destination: "LA",
+        status: "in_transit",
+        branding: {
+          tenantName: "Acme",
+          contactEmail: "not-an-email",
+        },
+      },
+    };
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(data),
+    });
+
+    const { getShipmentByTrackingId } = await import(
+      "../src/lib/tracking-api"
+    );
+    const result = await getShipmentByTrackingId("SL-1234");
+
+    expect(result?.branding?.contactEmail).toBeNull();
+  });
+
+  it("sanitizes non-HTTPS logoUrl in branding", async () => {
+    mockHeaders("acme.shiplens.io");
+
+    const data = {
+      success: true,
+      data: {
+        trackingId: "SL-1234",
+        origin: "Shanghai",
+        destination: "LA",
+        status: "in_transit",
+        branding: {
+          tenantName: "Acme",
+          logoUrl: "http://example.com/logo.png",
+        },
+      },
+    };
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(data),
+    });
+
+    const { getShipmentByTrackingId } = await import(
+      "../src/lib/tracking-api"
+    );
+    const result = await getShipmentByTrackingId("SL-1234");
+
+    expect(result?.branding?.logoUrl).toBeNull();
   });
 });
