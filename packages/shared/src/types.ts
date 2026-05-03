@@ -66,3 +66,71 @@ export type MilestoneType =
   | "out_for_delivery"
   | "delivered"
   | "exception";
+
+export interface MilestoneInfo {
+  type: MilestoneType;
+  description?: string | null;
+  location?: string | null;
+  occurredAt: string;
+}
+
+export interface ShipmentListItem {
+  id: string;
+  trackingId: string;
+  reference?: string | null;
+  origin?: string | null;
+  destination?: string | null;
+  carrier?: string | null;
+  serviceType?: string | null;
+  status: ShipmentStatus;
+  customerName?: string | null;
+  customerEmail?: string | null;
+  estimatedDelivery?: string | null;
+  actualDelivery?: string | null;
+  lastMilestone?: MilestoneInfo | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShipmentsListResponse {
+  success: boolean;
+  data: ShipmentListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  error?: string;
+}
+
+export interface ShipmentsQueryParams {
+  page?: number;
+  pageSize?: number;
+  status?: string;
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}
+
+export const SHIPMENT_STATUSES: ShipmentStatus[] = [
+  "pending",
+  "booked",
+  "in_transit",
+  "at_port",
+  "customs_clearance",
+  "out_for_delivery",
+  "delivered",
+  "exception",
+];
+
+export const SORTABLE_COLUMNS = [
+  "trackingId",
+  "customerName",
+  "origin",
+  "destination",
+  "status",
+  "estimatedDelivery",
+  "createdAt",
+] as const;
+
+export type SortableColumn = (typeof SORTABLE_COLUMNS)[number];
