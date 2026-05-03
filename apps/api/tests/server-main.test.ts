@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { FastifyInstance } from "fastify";
 import { hashApiKey } from "../src/plugins/auth";
 
+const servers: FastifyInstance[] = [];
+
 describe("main() – production startup", () => {
   const originalEnv = process.env;
 
@@ -11,6 +13,8 @@ describe("main() – production startup", () => {
   });
 
   afterEach(async () => {
+    await Promise.all(servers.map(s => s.close().catch(() => {})));
+    servers.length = 0;
     process.env = originalEnv;
     vi.restoreAllMocks();
   });
@@ -23,11 +27,10 @@ describe("main() – production startup", () => {
     const { main } = await import("../src/server");
 
     const server: FastifyInstance = await main();
+    servers.push(server);
 
     expect(server).toBeDefined();
     expect(typeof server.close).toBe("function");
-
-    await server.close();
   });
 
   it("uses default host and port when env vars are not set", async () => {
@@ -38,8 +41,7 @@ describe("main() – production startup", () => {
     const { main } = await import("../src/server");
 
     const server: FastifyInstance = await main();
-
-    await server.close();
+    servers.push(server);
   });
 
   it("exits with code 1 when server.listen fails", async () => {
@@ -53,7 +55,8 @@ describe("main() – production startup", () => {
 
     const { main } = await import("../src/server");
 
-    await main();
+    const server: FastifyInstance = await main();
+    servers.push(server);
 
     expect(exitSpy).toHaveBeenCalledWith(1);
 
@@ -68,6 +71,7 @@ describe("main() – production startup", () => {
 
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
+    vi.resetModules();
     vi.doMock("@shiplens/db", () => {
       throw new Error("no db module");
     });
@@ -75,12 +79,12 @@ describe("main() – production startup", () => {
     const { main } = await import("../src/server");
 
     const server: FastifyInstance = await main();
+    servers.push(server);
 
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("Could not initialize database-backed")
     );
 
-    await server.close();
     vi.doUnmock("@shiplens/db");
     warnSpy.mockRestore();
   });
@@ -111,6 +115,7 @@ describe("main() – production startup", () => {
     const mockEq = vi.fn((col: string, val: string) => ({ col, val }));
     const mockAnd = vi.fn((...args: unknown[]) => args);
 
+    vi.resetModules();
     vi.doMock("@shiplens/db", () => ({
       db: mockDb,
       apiKeys: mockApiKeys,
@@ -123,6 +128,7 @@ describe("main() – production startup", () => {
     const { main } = await import("../src/server");
 
     const server: FastifyInstance = await main();
+    servers.push(server);
 
     const res = await server.inject({
       method: "GET",
@@ -133,7 +139,6 @@ describe("main() – production startup", () => {
     expect(res.statusCode).toBe(200);
     expect(fakeSelect).toHaveBeenCalled();
 
-    await server.close();
     vi.doUnmock("@shiplens/db");
     vi.doUnmock("drizzle-orm");
   });
