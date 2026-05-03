@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { buildServer } from "../../src/server";
-import { authBearerHeader, DEFAULT_SECRET } from "../helpers/auth";
+import { authBearerHeader, DEFAULT_SECRET, createCsrfToken } from "../helpers/auth";
 import { hashApiKey } from "../../src/plugins/auth";
 
 const mockResolver = async (keyHash: string) => {
@@ -26,7 +26,7 @@ describe("CSV Import Routes", () => {
         method: "POST",
         url: "/api/csv-import",
         payload: {},
-        headers: authBearerHeader("t1"),
+        headers: { ...authBearerHeader("t1"), "x-csrf-token": createCsrfToken() },
       });
       expect(res.statusCode).toBe(202);
       expect(res.json().success).toBe(true);

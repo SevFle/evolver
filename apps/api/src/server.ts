@@ -6,6 +6,7 @@ import { rateLimiterPlugin } from "./plugins/rate-limiter";
 import { requestLoggerPlugin } from "./plugins/request-logger";
 import { authPlugin } from "./plugins/auth";
 import type { ApiKeyResolver } from "./plugins/auth";
+import { csrfPlugin } from "./plugins/csrf";
 import { tenantResolverPlugin } from "./plugins/tenant-resolver";
 import { healthRoutes } from "./routes/health";
 import { shipmentRoutes } from "./routes/shipments";
@@ -58,6 +59,7 @@ export async function buildServer(options?: ServerOptions) {
   await server.register(authPlugin, {
     apiKeyResolver: options?.apiKeyResolver,
   });
+  await server.register(csrfPlugin);
   await server.register(tenantResolverPlugin);
 
   await server.register(healthRoutes, { prefix: "/api" });

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { buildServer } from "../../src/server";
-import { authBearerHeader, DEFAULT_SECRET } from "../helpers/auth";
+import { authBearerHeader, DEFAULT_SECRET, createCsrfToken } from "../helpers/auth";
 import { hashApiKey } from "../../src/plugins/auth";
 
 const mockResolver = async (keyHash: string) => {
@@ -46,7 +46,7 @@ describe("API Key Routes", () => {
       const res = await server.inject({
         method: "POST",
         url: "/api/api-keys",
-        headers: authBearerHeader("t1"),
+        headers: { ...authBearerHeader("t1"), "x-csrf-token": createCsrfToken() },
       });
       expect(res.statusCode).toBe(201);
       const key = res.json().data.key;
@@ -57,7 +57,7 @@ describe("API Key Routes", () => {
     });
 
     it("generates unique keys on each request", async () => {
-      const headers = authBearerHeader("t1");
+      const headers = { ...authBearerHeader("t1"), "x-csrf-token": createCsrfToken() };
       const keys = new Set<string>();
       for (let i = 0; i < 5; i++) {
         const res = await server.inject({
@@ -84,7 +84,7 @@ describe("API Key Routes", () => {
       const res = await server.inject({
         method: "DELETE",
         url: "/api/api-keys/my-key-id",
-        headers: authBearerHeader("t1"),
+        headers: { ...authBearerHeader("t1"), "x-csrf-token": createCsrfToken() },
       });
       expect(res.statusCode).toBe(200);
       expect(res.json().message).toContain("my-key-id");
@@ -96,7 +96,7 @@ describe("API Key Routes", () => {
       const res = await server.inject({
         method: "DELETE",
         url: `/api/api-keys/${id}`,
-        headers: authBearerHeader("t1"),
+        headers: { ...authBearerHeader("t1"), "x-csrf-token": createCsrfToken() },
       });
       expect(res.statusCode).toBe(200);
       expect(res.json().message).toContain(id);

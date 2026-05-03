@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { buildServer } from "../../src/server";
-import { authBearerHeader, DEFAULT_SECRET } from "../helpers/auth";
+import { authBearerHeader, DEFAULT_SECRET, createCsrfToken } from "../helpers/auth";
 import { hashApiKey } from "../../src/plugins/auth";
 
 const mockResolver = async (keyHash: string) => {
@@ -47,7 +47,7 @@ describe("Notification Routes", () => {
         method: "POST",
         url: "/api/notifications/rules",
         payload: { milestoneType: "delivered", channel: "email" },
-        headers: authBearerHeader("t1"),
+        headers: { ...authBearerHeader("t1"), "x-csrf-token": createCsrfToken() },
       });
       expect(res.statusCode).toBe(201);
       expect(res.json().message).toBe("Notification rule created");

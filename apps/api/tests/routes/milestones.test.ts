@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { buildServer } from "../../src/server";
-import { authBearerHeader, DEFAULT_SECRET } from "../helpers/auth";
+import { authBearerHeader, DEFAULT_SECRET, createCsrfToken } from "../helpers/auth";
 import { hashApiKey } from "../../src/plugins/auth";
 
 const mockResolver = async (keyHash: string) => {
@@ -60,7 +60,7 @@ describe("Milestone Routes", () => {
         method: "POST",
         url: "/api/milestones",
         payload: { type: "picked_up", description: "Picked up" },
-        headers: authBearerHeader("t1"),
+        headers: { ...authBearerHeader("t1"), "x-csrf-token": createCsrfToken() },
       });
       expect(res.statusCode).toBe(201);
       expect(res.json().message).toBe("Milestone created");
@@ -70,7 +70,7 @@ describe("Milestone Routes", () => {
       const res = await server.inject({
         method: "POST",
         url: "/api/milestones",
-        headers: authBearerHeader("t1"),
+        headers: { ...authBearerHeader("t1"), "x-csrf-token": createCsrfToken() },
       });
       expect(res.statusCode).toBe(201);
     });

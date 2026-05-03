@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { buildServer } from "../../src/server";
-import { authBearerHeader, apiKeyHeader, DEFAULT_SECRET } from "../helpers/auth";
+import { authBearerHeader, apiKeyHeader, DEFAULT_SECRET, createCsrfToken } from "../helpers/auth";
 import { hashApiKey } from "../../src/plugins/auth";
 
 const mockResolver = async (keyHash: string) => {
@@ -58,7 +58,7 @@ describe("Tenant Routes", () => {
         method: "PATCH",
         url: "/api/tenants/current",
         payload: { name: "Updated Corp", primaryColor: "#FF0000" },
-        headers: authBearerHeader("t1"),
+        headers: { ...authBearerHeader("t1"), "x-csrf-token": createCsrfToken() },
       });
       expect(res.statusCode).toBe(200);
       expect(res.json().message).toBe("Tenant updated");
@@ -68,7 +68,7 @@ describe("Tenant Routes", () => {
       const res = await server.inject({
         method: "PATCH",
         url: "/api/tenants/current",
-        headers: authBearerHeader("t1"),
+        headers: { ...authBearerHeader("t1"), "x-csrf-token": createCsrfToken() },
       });
       expect(res.statusCode).toBe(200);
     });
