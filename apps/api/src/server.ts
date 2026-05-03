@@ -20,6 +20,10 @@ export interface ServerOptions {
   apiKeyResolver?: ApiKeyResolver;
 }
 
+export interface MainOptions {
+  skipAutoStart?: boolean;
+}
+
 export function validateEnvironment(): void {
   const nodeEnv = process.env.NODE_ENV ?? "development";
   const isProduction = nodeEnv === "production";
@@ -72,10 +76,11 @@ export async function buildServer(options?: ServerOptions) {
   return server;
 }
 
-export async function main() {
+export async function main(options?: MainOptions) {
+  const { skipAutoStart = false } = options ?? {};
   let resolver: ApiKeyResolver | undefined;
 
-  if (!process.env.VITEST) {
+  if (!skipAutoStart) {
     try {
       const { db } = await import("@shiplens/db");
       const { apiKeys } = await import("@shiplens/db");
@@ -98,15 +103,17 @@ export async function main() {
 
   const server = await buildServer({ apiKeyResolver: resolver });
 
-  const host = process.env.HOST ?? "0.0.0.0";
-  const port = Number(process.env.PORT ?? 3001);
+  if (!skipAutoStart) {
+    const host = process.env.HOST ?? "0.0.0.0";
+    const port = Number(process.env.PORT ?? 3001);
 
-  try {
-    await server.listen({ host, port });
-    server.log.info(`ShipLens API listening on ${host}:${port}`);
-  } catch (err) {
-    server.log.error(err);
-    process.exit(1);
+    try {
+      await server.listen({ host, port });
+      server.log.info(`ShipLens API listening on ${host}:${port}`);
+    } catch (err) {
+      server.log.error(err);
+      process.exit(1);
+    }
   }
 
   return server;

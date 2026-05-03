@@ -8,11 +8,13 @@ describe("main() – production startup", () => {
   beforeEach(() => {
     process.env = { ...originalEnv };
     vi.restoreAllMocks();
+    vi.resetModules();
   });
 
   afterEach(async () => {
     process.env = originalEnv;
     vi.restoreAllMocks();
+    vi.resetModules();
   });
 
   it("starts the server and logs the listening message", async () => {
@@ -33,7 +35,7 @@ describe("main() – production startup", () => {
   it("uses default host and port when env vars are not set", async () => {
     process.env.JWT_SECRET = "test-secret";
     delete process.env.HOST;
-    process.env.PORT = "0";
+    delete process.env.PORT;
 
     const { main } = await import("../src/server");
 
@@ -64,13 +66,23 @@ describe("main() – production startup", () => {
     process.env.JWT_SECRET = "test-secret";
     process.env.HOST = "127.0.0.1";
     process.env.PORT = "0";
-    delete process.env.VITEST;
 
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    vi.doMock("@shiplens/db", () => {
-      throw new Error("no db module");
-    });
+    vi.doMock("@shiplens/db", () => ({
+      get db() {
+        throw new Error("Connection refused");
+      },
+      apiKeys: {
+        tenantId: "tenant_id",
+        keyHash: "key_hash",
+        active: "active",
+      },
+    }));
+    vi.doMock("drizzle-orm", () => ({
+      eq: (col: string, val: string) => ({ col, val}),
+      and: (...args: unknown[]) => args,
+    }));
 
     const { main } = await import("../src/server");
 
@@ -82,6 +94,7 @@ describe("main() – production startup", () => {
 
     await server.close();
     vi.doUnmock("@shiplens/db");
+    vi.doUnmock("drizzle-orm");
     warnSpy.mockRestore();
   });
 
@@ -89,16 +102,11 @@ describe("main() – production startup", () => {
     process.env.JWT_SECRET = "test-secret";
     process.env.HOST = "127.0.0.1";
     process.env.PORT = "0";
-    delete process.env.VITEST;
 
-    const fakeSelect = vi.fn().mockResolvedValue([{ tenantId: "tenant-from-db" }]);
-    const fakeFrom = vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ tenantId: "tenant-from-db" }]) }) });
-    const fakeWhere = vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ tenantId: "tenant-from-db" }]) });
     const fakeLimit = vi.fn().mockResolvedValue([{ tenantId: "tenant-from-db" }]);
-
-    fakeFrom.mockReturnValue({ where: fakeWhere });
-    fakeWhere.mockReturnValue({ limit: fakeLimit });
-    fakeSelect.mockReturnValue({ from: fakeFrom });
+    const fakeWhere = vi.fn().mockReturnValue({ limit: fakeLimit });
+    const fakeFrom = vi.fn().mockReturnValue({ where: fakeWhere });
+    const fakeSelect = vi.fn().mockReturnValue({ from: fakeFrom });
 
     const mockDb = {
       select: fakeSelect,
@@ -136,5 +144,72 @@ describe("main() – production startup", () => {
     await server.close();
     vi.doUnmock("@shiplens/db");
     vi.doUnmock("drizzle-orm");
+  });
+
+  it("resolver returns null when no matching api key found", async () => {
+    process.env.JWT_SECRET = "test-secret";
+    process.env.HOST = "127.0.0.1";
+    process.env.PORT = "0";
+
+    const fakeLimit = vi.fn().mockResolvedValue([]);
+    const fakeWhere = vi.fn().mockReturnValue({ limit: fakeLimit });
+    const fakeFrom = vi.fn().mockReturnValue({ where: fakeWhere });
+    const fakeSelect = vi.fn().mockReturnValue({ from: fakeFrom });
+
+    const mockDb = {
+      select: fakeSelect,
+    };
+    const mockApiKeys = {
+      tenantId: "tenant_id",
+      keyHash: "key_hash",
+      active: "active",
+    };
+    const mockEq = vi.fn((col: string, val: string) => ({ col, val }));
+    const mockAnd = vi.fn((...args: unknown[]) => args);
+
+    vi.doMock("@shiplens/db", () => ({
+      db: mockDb,
+      apiKeys: mockApiKeys,
+    }));
+    vi.doMock("drizzle-orm", () => ({
+      eq: mockEq,
+      and: mockAnd,
+    }));
+
+    const { main } = await import("../src/server");
+
+    const server: FastifyInstance = await main();
+
+    const res = await server.inject({
+      method: "GET",
+      url: "/api/shipments",
+      headers: { "x-api-key": "unknown-key" },
+    });
+
+    expect(res.statusCode).toBe(401);
+    expect(fakeSelect).toHaveBeenCalled();
+
+    await server.close();
+    vi.doUnmock("@shiplens/db");
+    vi.doUnmock("drizzle-orm");
+  });
+
+  it("skips db init and listening when skipAutoStart is true", async () => {
+    process.env.JWT_SECRET = "test-secret";
+
+    const { main } = await import("../src/server");
+
+    const server: FastifyInstance = await main({ skipAutoStart: true });
+
+    expect(server).toBeDefined();
+    expect(typeof server.close).toBe("function");
+
+    const res = await server.inject({
+      method: "GET",
+      url: "/api/health",
+    });
+    expect(res.statusCode).toBe(200);
+
+    await server.close();
   });
 });
