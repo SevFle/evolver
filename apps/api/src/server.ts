@@ -111,7 +111,3 @@ export async function main() {
 
   return server;
 }
-
-if (!process.env.VITEST) {
-  main();
-}

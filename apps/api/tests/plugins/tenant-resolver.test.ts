@@ -69,4 +69,23 @@ describe("tenantResolver plugin", () => {
 
     expect(res.json().tenantId).toBe("existing-tenant");
   });
+
+  it("handles undefined host header gracefully", async () => {
+    const testServer = Fastify();
+    testServer.addHook("onRequest", async (request) => {
+      request.headers.host = undefined as unknown as string;
+    });
+    await testServer.register(tenantResolverPlugin);
+    testServer.get("/test", async (request) => ({
+      tenantId: request.tenantId ?? null,
+    }));
+
+    const res = await testServer.inject({
+      method: "GET",
+      url: "/test",
+    });
+
+    expect(res.json().tenantId).toBeNull();
+    await testServer.close();
+  });
 });

@@ -13,7 +13,10 @@ export default async function TrackingPage({ params }: TrackingPageProps) {
 
   if (!data) {
     return (
-      <BrandedShell>
+      <BrandedShell
+        tenantName="ShipLens"
+        contactEmail="support@shiplens.io"
+      >
         <div className="tracking-not-found">
           <svg
             className="tracking-not-found-icon"
@@ -44,23 +47,23 @@ export default async function TrackingPage({ params }: TrackingPageProps) {
     );
   }
 
-  const branding = data.branding;
+  const b = data.branding;
 
   return (
     <BrandedShell
-      tenantName={branding?.tenantName}
-      logoUrl={branding?.logoUrl}
-      primaryColor={branding?.primaryColor}
-      tagline={branding?.tagline}
-      contactEmail={branding?.contactEmail}
-      contactPhone={branding?.contactPhone}
-      supportUrl={branding?.supportUrl}
-      customFooterText={branding?.customFooterText}
+      tenantName={b?.tenantName}
+      logoUrl={b?.logoUrl}
+      primaryColor={b?.primaryColor}
+      contactEmail={b?.contactEmail}
+      customFooterText={b?.customFooterText}
+      tagline={b?.tagline}
+      contactPhone={b?.contactPhone}
+      supportUrl={b?.supportUrl}
     >
-      <ShipmentHeader shipment={data} primaryColor={branding?.primaryColor} />
+      <ShipmentHeader shipment={data} primaryColor={b?.primaryColor} />
       <MilestoneTimeline
         milestones={data.milestones ?? []}
-        primaryColor={branding?.primaryColor}
+        primaryColor={b?.primaryColor}
       />
     </BrandedShell>
   );

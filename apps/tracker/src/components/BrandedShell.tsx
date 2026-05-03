@@ -1,3 +1,12 @@
+function isValidHttpsUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 interface BrandedShellProps {
   children: React.ReactNode;
   tenantName?: string;
@@ -22,15 +31,16 @@ export function BrandedShell({
   customFooterText,
 }: BrandedShellProps) {
   const brandColor = primaryColor ?? "var(--color-primary)";
+  const safeLogoUrl = logoUrl && isValidHttpsUrl(logoUrl) ? logoUrl : null;
 
   return (
     <div className="tracking-shell">
       <header className="tracking-header" style={{ borderColor: brandColor }}>
         <div className="tracking-header-inner">
           <div className="tracking-brand">
-            {logoUrl ? (
+            {safeLogoUrl ? (
               <img
-                src={logoUrl}
+                src={safeLogoUrl}
                 alt={tenantName}
                 className="tracking-logo"
               />

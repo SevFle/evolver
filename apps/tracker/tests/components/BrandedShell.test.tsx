@@ -78,6 +78,47 @@ describe("BrandedShell", () => {
     expect(img?.getAttribute("src")).toBe("https://example.com/logo.png");
   });
 
+  it("falls back to text when logoUrl is http (not https)", () => {
+    const { container, getByText } = render(
+      <BrandedShell logoUrl="http://example.com/logo.png" tenantName="TestCo">
+        <span>child</span>
+      </BrandedShell>
+    );
+    expect(container.querySelector("img")).toBeNull();
+    expect(getByText("TestCo")).toBeDefined();
+  });
+
+  it("falls back to text when logoUrl is malformed", () => {
+    const { container, getByText } = render(
+      <BrandedShell logoUrl="not-a-valid-url" tenantName="TestCo">
+        <span>child</span>
+      </BrandedShell>
+    );
+    expect(container.querySelector("img")).toBeNull();
+    expect(getByText("TestCo")).toBeDefined();
+  });
+
+  it("falls back to text when logoUrl is empty string", () => {
+    const { container, getByText } = render(
+      <BrandedShell logoUrl="" tenantName="TestCo">
+        <span>child</span>
+      </BrandedShell>
+    );
+    expect(container.querySelector("img")).toBeNull();
+    expect(getByText("TestCo")).toBeDefined();
+  });
+
+  it("renders logo for valid https URL with path", () => {
+    const { container } = render(
+      <BrandedShell logoUrl="https://cdn.example.com/assets/logo.svg">
+        <span>child</span>
+      </BrandedShell>
+    );
+    const img = container.querySelector("img");
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute("src")).toBe("https://cdn.example.com/assets/logo.svg");
+  });
+
   it("renders tenant name as text when no logoUrl", () => {
     const { getByText, container } = render(
       <BrandedShell tenantName="TestCo">
