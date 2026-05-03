@@ -1,47 +1,126 @@
+import type { TrackingPageData } from "@/lib/tracking-api";
+
 interface ShipmentHeaderProps {
-  shipment: {
-    trackingId: string;
-    origin: string;
-    destination: string;
-    status: string;
-    carrier?: string;
-    estimatedDelivery?: string;
-  };
+  shipment: TrackingPageData;
+  primaryColor?: string | null;
 }
 
-export function ShipmentHeader({ shipment }: ShipmentHeaderProps) {
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return "";
+  try {
+    return new Date(dateStr).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+function getStatusLabel(status: string): string {
+  return status.replace(/_/g, " ").toUpperCase();
+}
+
+function getStatusClass(status: string): string {
+  if (status === "delivered") return "status-delivered";
+  if (status === "exception") return "status-exception";
+  if (
+    status === "in_transit" ||
+    status === "out_for_delivery" ||
+    status === "at_port"
+  )
+    return "status-active";
+  return "status-default";
+}
+
+export function ShipmentHeader({
+  shipment,
+  primaryColor,
+}: ShipmentHeaderProps) {
+  const brandColor = primaryColor ?? "var(--color-primary)";
+  const etaFormatted = formatDate(shipment.estimatedDelivery);
+  const actualFormatted = formatDate(shipment.actualDelivery);
+  const createdFormatted = formatDate(shipment.createdAt);
+
   return (
-    <div style={{ marginBottom: "2rem" }}>
-      <h2 style={{ fontSize: "1.125rem", marginBottom: "0.5rem" }}>
-        {shipment.origin} → {shipment.destination}
-      </h2>
-      <p style={{ color: "var(--color-muted)", marginBottom: "0.25rem" }}>
-        Tracking: {shipment.trackingId}
-      </p>
-      {shipment.carrier && (
-        <p style={{ color: "var(--color-muted)", marginBottom: "0.25rem" }}>
-          Carrier: {shipment.carrier}
-        </p>
-      )}
-      {shipment.estimatedDelivery && (
-        <p style={{ color: "var(--color-muted)", marginBottom: "0.25rem" }}>
-          Est. delivery: {shipment.estimatedDelivery}
-        </p>
-      )}
-      <p
-        style={{
-          display: "inline-block",
-          padding: "0.25rem 0.75rem",
-          borderRadius: "9999px",
-          background: "var(--color-primary)",
-          color: "#fff",
-          fontSize: "0.75rem",
-          textTransform: "uppercase",
-          marginTop: "0.5rem",
-        }}
+    <div className="shipment-header">
+      <div className="shipment-route">
+        <div className="shipment-route-point">
+          <span className="shipment-route-label">Origin</span>
+          <span className="shipment-route-value">{shipment.origin}</span>
+        </div>
+        <div className="shipment-route-line">
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={brandColor}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14" />
+            <path d="m12 5 7 7-7 7" />
+          </svg>
+        </div>
+        <div className="shipment-route-point">
+          <span className="shipment-route-label">Destination</span>
+          <span className="shipment-route-value">{shipment.destination}</span>
+        </div>
+      </div>
+
+      <div className="shipment-meta-grid">
+        <div className="shipment-meta-item">
+          <span className="shipment-meta-label">Tracking ID</span>
+          <span className="shipment-meta-value">{shipment.trackingId}</span>
+        </div>
+        {shipment.carrier && (
+          <div className="shipment-meta-item">
+            <span className="shipment-meta-label">Carrier</span>
+            <span className="shipment-meta-value">{shipment.carrier}</span>
+          </div>
+        )}
+        {shipment.serviceType && (
+          <div className="shipment-meta-item">
+            <span className="shipment-meta-label">Service</span>
+            <span className="shipment-meta-value">{shipment.serviceType}</span>
+          </div>
+        )}
+        {actualFormatted && (
+          <div className="shipment-meta-item">
+            <span className="shipment-meta-label">Delivered</span>
+            <span className="shipment-meta-value">{actualFormatted}</span>
+          </div>
+        )}
+        {!actualFormatted && etaFormatted && (
+          <div className="shipment-meta-item">
+            <span className="shipment-meta-label">Est. Delivery</span>
+            <span className="shipment-meta-value">{etaFormatted}</span>
+          </div>
+        )}
+        {shipment.reference && (
+          <div className="shipment-meta-item">
+            <span className="shipment-meta-label">Reference</span>
+            <span className="shipment-meta-value">{shipment.reference}</span>
+          </div>
+        )}
+        {createdFormatted && (
+          <div className="shipment-meta-item">
+            <span className="shipment-meta-label">Created</span>
+            <span className="shipment-meta-value">{createdFormatted}</span>
+          </div>
+        )}
+      </div>
+
+      <span
+        className={`shipment-status-badge ${getStatusClass(shipment.status)}`}
+        style={{ backgroundColor: brandColor }}
       >
-        {shipment.status.replace(/_/g, " ").toUpperCase()}
-      </p>
+        {getStatusLabel(shipment.status)}
+      </span>
     </div>
   );
 }

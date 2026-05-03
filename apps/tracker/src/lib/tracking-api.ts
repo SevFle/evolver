@@ -2,33 +2,55 @@ import { resolveTenantFromHost } from "./tenant-resolver";
 
 const API_BASE = process.env.API_INTERNAL_URL ?? "http://localhost:3001";
 
-interface ShipmentData {
+export interface TrackingMilestone {
+  type: string;
+  description?: string;
+  location?: string;
+  occurredAt: string;
+}
+
+export interface TrackingBranding {
+  tenantName: string;
+  logoUrl?: string | null;
+  primaryColor?: string | null;
+  tagline?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  supportUrl?: string | null;
+  customFooterText?: string | null;
+}
+
+export interface TrackingPageData {
   trackingId: string;
+  reference?: string | null;
   origin: string;
   destination: string;
   status: string;
-  carrier?: string;
-  estimatedDelivery?: string;
-  milestones?: Array<{
-    type: string;
-    description: string;
-    location?: string;
-    occurredAt: string;
-  }>;
+  carrier?: string | null;
+  serviceType?: string | null;
+  estimatedDelivery?: string | null;
+  actualDelivery?: string | null;
+  customerName?: string | null;
+  createdAt?: string | null;
+  milestones?: TrackingMilestone[];
+  branding?: TrackingBranding | null;
 }
 
 export async function getShipmentByTrackingId(
   trackingId: string
-): Promise<ShipmentData | null> {
+): Promise<TrackingPageData | null> {
   const tenantSlug = await resolveTenantFromHost();
 
   try {
-    const res = await fetch(`${API_BASE}/api/shipments/${trackingId}`, {
-      headers: {
-        ...(tenantSlug ? { "x-tenant-slug": tenantSlug } : {}),
-      },
-      next: { revalidate: 30 },
-    });
+    const res = await fetch(
+      `${API_BASE}/api/tracking-pages/${encodeURIComponent(trackingId)}`,
+      {
+        headers: {
+          ...(tenantSlug ? { "x-tenant-slug": tenantSlug } : {}),
+        },
+        next: { revalidate: 30 },
+      }
+    );
 
     if (!res.ok) return null;
 
