@@ -31,7 +31,7 @@ describe("main() – production startup", () => {
     }
   });
 
-  it("uses default host and port when env vars are not set", async () => {
+  it("uses default host when HOST env var is not set", async () => {
     process.env.JWT_SECRET = "test-secret";
     delete process.env.HOST;
     process.env.PORT = "0";
@@ -86,7 +86,11 @@ describe("main() – production startup", () => {
         expect.stringContaining("Could not initialize database-backed")
       );
     } finally {
-      await server.close();
+      try {
+        await server.close();
+      } catch {
+        // server.close() failure should not prevent cleanup
+      }
       vi.doUnmock("@shiplens/db");
       warnSpy.mockRestore();
     }
@@ -141,7 +145,11 @@ describe("main() – production startup", () => {
       expect(res.statusCode).toBe(200);
       expect(fakeSelect).toHaveBeenCalled();
     } finally {
-      await server.close();
+      try {
+        await server.close();
+      } catch {
+        // server.close() failure should not prevent cleanup
+      }
       vi.doUnmock("@shiplens/db");
       vi.doUnmock("drizzle-orm");
     }
