@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { FastifyInstance } from "fastify";
-import { hashApiKey } from "../src/plugins/auth";
 
 describe("main() – production startup", () => {
   const originalEnv = process.env;
@@ -51,13 +50,15 @@ describe("main() – production startup", () => {
       .spyOn(process, "exit")
       .mockImplementation(() => undefined as never);
 
-    const { main } = await import("../src/server");
+    try {
+      const { main } = await import("../src/server");
 
-    await main();
+      await main();
 
-    expect(exitSpy).toHaveBeenCalledWith(1);
-
-    exitSpy.mockRestore();
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    } finally {
+      exitSpy.mockRestore();
+    }
   });
 
   it("warns when database resolver cannot be initialized", async () => {
@@ -72,17 +73,20 @@ describe("main() – production startup", () => {
       throw new Error("no db module");
     });
 
-    const { main } = await import("../src/server");
+    try {
+      const { main } = await import("../src/server");
 
-    const server: FastifyInstance = await main();
+      const server: FastifyInstance = await main();
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Could not initialize database-backed")
-    );
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Could not initialize database-backed")
+      );
 
-    await server.close();
-    vi.doUnmock("@shiplens/db");
-    warnSpy.mockRestore();
+      await server.close();
+    } finally {
+      vi.doUnmock("@shiplens/db");
+      warnSpy.mockRestore();
+    }
   });
 
   it("initializes db-backed resolver and resolves tenant via api key", async () => {
@@ -91,18 +95,12 @@ describe("main() – production startup", () => {
     process.env.PORT = "0";
     delete process.env.VITEST;
 
-    const fakeSelect = vi.fn().mockResolvedValue([{ tenantId: "tenant-from-db" }]);
-    const fakeFrom = vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ tenantId: "tenant-from-db" }]) }) });
-    const fakeWhere = vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ tenantId: "tenant-from-db" }]) });
     const fakeLimit = vi.fn().mockResolvedValue([{ tenantId: "tenant-from-db" }]);
+    const fakeWhere = vi.fn().mockReturnValue({ limit: fakeLimit });
+    const fakeFrom = vi.fn().mockReturnValue({ where: fakeWhere });
+    const fakeSelect = vi.fn().mockReturnValue({ from: fakeFrom });
 
-    fakeFrom.mockReturnValue({ where: fakeWhere });
-    fakeWhere.mockReturnValue({ limit: fakeLimit });
-    fakeSelect.mockReturnValue({ from: fakeFrom });
-
-    const mockDb = {
-      select: fakeSelect,
-    };
+    const mockDb = { select: fakeSelect };
     const mockApiKeys = {
       tenantId: "tenant_id",
       keyHash: "key_hash",
@@ -120,21 +118,139 @@ describe("main() – production startup", () => {
       and: mockAnd,
     }));
 
-    const { main } = await import("../src/server");
+    try {
+      const { main } = await import("../src/server");
 
-    const server: FastifyInstance = await main();
+      const server: FastifyInstance = await main();
 
-    const res = await server.inject({
-      method: "GET",
-      url: "/api/shipments",
-      headers: { "x-api-key": "my-api-key" },
-    });
+      const res = await server.inject({
+        method: "GET",
+        url: "/api/shipments",
+        headers: { "x-api-key": "my-api-key" },
+      });
 
-    expect(res.statusCode).toBe(200);
-    expect(fakeSelect).toHaveBeenCalled();
+      expect(res.statusCode).toBe(200);
+      expect(fakeSelect).toHaveBeenCalled();
+      expect(mockEq).toHaveBeenCalledWith(mockApiKeys.keyHash, expect.any(String));
+      expect(mockEq).toHaveBeenCalledWith(mockApiKeys.active, true);
+      expect(mockAnd).toHaveBeenCalled();
+      expect(fakeFrom).toHaveBeenCalledWith(mockApiKeys);
+      expect(fakeWhere).toHaveBeenCalled();
+      expect(fakeLimit).toHaveBeenCalledWith(1);
 
-    await server.close();
-    vi.doUnmock("@shiplens/db");
-    vi.doUnmock("drizzle-orm");
+      const body = res.json();
+      expect(body.success).toBe(true);
+
+      await server.close();
+    } finally {
+      vi.doUnmock("@shiplens/db");
+      vi.doUnmock("drizzle-orm");
+    }
+  });
+
+  it("rejects api key when resolver returns null tenant", async () => {
+    process.env.JWT_SECRET = "test-secret";
+    process.env.HOST = "127.0.0.1";
+    process.env.PORT = "0";
+    delete process.env.VITEST;
+
+    const fakeLimit = vi.fn().mockResolvedValue([]);
+    const fakeWhere = vi.fn().mockReturnValue({ limit: fakeLimit });
+    const fakeFrom = vi.fn().mockReturnValue({ where: fakeWhere });
+    const fakeSelect = vi.fn().mockReturnValue({ from: fakeFrom });
+
+    const mockDb = { select: fakeSelect };
+    const mockApiKeys = {
+      tenantId: "tenant_id",
+      keyHash: "key_hash",
+      active: "active",
+    };
+    const mockEq = vi.fn((col: string, val: string) => ({ col, val }));
+    const mockAnd = vi.fn((...args: unknown[]) => args);
+
+    vi.doMock("@shiplens/db", () => ({
+      db: mockDb,
+      apiKeys: mockApiKeys,
+    }));
+    vi.doMock("drizzle-orm", () => ({
+      eq: mockEq,
+      and: mockAnd,
+    }));
+
+    try {
+      const { main } = await import("../src/server");
+
+      const server: FastifyInstance = await main();
+
+      const res = await server.inject({
+        method: "GET",
+        url: "/api/shipments",
+        headers: { "x-api-key": "unknown-key" },
+      });
+
+      expect(res.statusCode).toBe(401);
+      expect(fakeSelect).toHaveBeenCalled();
+
+      const body = res.json();
+      expect(body.error).toBe("Invalid API key");
+
+      await server.close();
+    } finally {
+      vi.doUnmock("@shiplens/db");
+      vi.doUnmock("drizzle-orm");
+    }
+  });
+
+  it("resolves tenant id from db and makes it available on request", async () => {
+    process.env.JWT_SECRET = "test-secret";
+    process.env.HOST = "127.0.0.1";
+    process.env.PORT = "0";
+    delete process.env.VITEST;
+
+    const fakeLimit = vi.fn().mockResolvedValue([{ tenantId: "acme-corp" }]);
+    const fakeWhere = vi.fn().mockReturnValue({ limit: fakeLimit });
+    const fakeFrom = vi.fn().mockReturnValue({ where: fakeWhere });
+    const fakeSelect = vi.fn().mockReturnValue({ from: fakeFrom });
+
+    const mockDb = { select: fakeSelect };
+    const mockApiKeys = {
+      tenantId: "tenant_id",
+      keyHash: "key_hash",
+      active: "active",
+    };
+    const mockEq = vi.fn((col: string, val: string) => ({ col, val }));
+    const mockAnd = vi.fn((...args: unknown[]) => args);
+
+    vi.doMock("@shiplens/db", () => ({
+      db: mockDb,
+      apiKeys: mockApiKeys,
+    }));
+    vi.doMock("drizzle-orm", () => ({
+      eq: mockEq,
+      and: mockAnd,
+    }));
+
+    try {
+      const { main } = await import("../src/server");
+
+      const server: FastifyInstance = await main();
+
+      const res = await server.inject({
+        method: "GET",
+        url: "/api/shipments",
+        headers: { "x-api-key": "valid-acme-key" },
+      });
+
+      expect(res.statusCode).toBe(200);
+
+      const body = res.json();
+      expect(body.success).toBe(true);
+      expect(body.data).toEqual([]);
+
+      await server.close();
+    } finally {
+      vi.doUnmock("@shiplens/db");
+      vi.doUnmock("drizzle-orm");
+    }
   });
 });
