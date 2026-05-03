@@ -6,5 +6,5 @@ interface OldTrackingPageProps {
 
 export default async function OldTrackingPage({ params }: OldTrackingPageProps) {
   const { trackingId } = await params;
-  redirect(`/track/${trackingId}`);
+  redirect(`/track/${encodeURIComponent(trackingId)}`);
 }

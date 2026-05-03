@@ -1,3 +1,23 @@
+const ALLOWED_SCHEMES = ["https:", "mailto:", "tel:"];
+const DANGEROUS_SCHEMES = ["javascript:", "data:", "vbscript:"];
+
+export function sanitizeUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+
+  const trimmed = url.trim();
+
+  if (trimmed.startsWith("/")) return trimmed;
+
+  try {
+    const parsed = new URL(trimmed);
+    if (DANGEROUS_SCHEMES.includes(parsed.protocol)) return null;
+    if (!ALLOWED_SCHEMES.includes(parsed.protocol)) return null;
+    return trimmed;
+  } catch {
+    return null;
+  }
+}
+
 interface BrandedShellProps {
   children: React.ReactNode;
   tenantName?: string;
@@ -22,15 +42,17 @@ export function BrandedShell({
   customFooterText,
 }: BrandedShellProps) {
   const brandColor = primaryColor ?? "var(--color-primary)";
+  const safeLogoUrl = sanitizeUrl(logoUrl);
+  const safeSupportUrl = sanitizeUrl(supportUrl);
 
   return (
     <div className="tracking-shell">
       <header className="tracking-header" style={{ borderColor: brandColor }}>
         <div className="tracking-header-inner">
           <div className="tracking-brand">
-            {logoUrl ? (
+            {safeLogoUrl ? (
               <img
-                src={logoUrl}
+                src={safeLogoUrl}
                 alt={tenantName}
                 className="tracking-logo"
               />
@@ -61,9 +83,9 @@ export function BrandedShell({
               {contactPhone}
             </a>
           )}
-          {supportUrl && (
+          {safeSupportUrl && (
             <a
-              href={supportUrl}
+              href={safeSupportUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="tracking-footer-link"
