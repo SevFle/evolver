@@ -8,11 +8,13 @@ describe("main() – production startup", () => {
   beforeEach(() => {
     process.env = { ...originalEnv };
     vi.restoreAllMocks();
+    vi.resetModules();
   });
 
   afterEach(async () => {
     process.env = originalEnv;
     vi.restoreAllMocks();
+    vi.resetModules();
   });
 
   it("starts the server and logs the listening message", async () => {
@@ -45,18 +47,38 @@ describe("main() – production startup", () => {
   it("exits with code 1 when server.listen fails", async () => {
     process.env.JWT_SECRET = "test-secret";
     process.env.HOST = "127.0.0.1";
-    process.env.PORT = "-1";
+    process.env.PORT = "0";
 
     const exitSpy = vi
       .spyOn(process, "exit")
       .mockImplementation(() => undefined as never);
 
+    vi.doMock("fastify", async () => {
+      const actual = await vi.importActual("fastify");
+      return {
+        default: (...args: any[]) => {
+          const instance = (actual as any).default(...args);
+          vi.spyOn(instance, "listen").mockRejectedValue(
+            new Error("listen EACCES: permission denied")
+          );
+          return instance;
+        },
+      };
+    });
+
     const { main } = await import("../src/server");
 
-    await main();
+    const server = await main();
 
     expect(exitSpy).toHaveBeenCalledWith(1);
 
+    try {
+      await server.close();
+    } catch {
+      // server may be in an inconsistent state after failed listen
+    }
+
+    vi.doUnmock("fastify");
     exitSpy.mockRestore();
   });
 
