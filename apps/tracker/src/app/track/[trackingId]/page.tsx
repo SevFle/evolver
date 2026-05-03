@@ -1,7 +1,10 @@
+import { notFound } from "next/navigation";
 import { getShipmentByTrackingId } from "@/lib/tracking-api";
 import { BrandedShell } from "@/components/BrandedShell";
 import { ShipmentHeader } from "@/components/ShipmentHeader";
 import { MilestoneTimeline } from "@/components/MilestoneTimeline";
+
+const TRACKING_ID_REGEX = /^[A-Za-z0-9_-]+$/;
 
 interface TrackingPageProps {
   params: Promise<{ trackingId: string }>;
@@ -9,6 +12,11 @@ interface TrackingPageProps {
 
 export default async function TrackingPage({ params }: TrackingPageProps) {
   const { trackingId } = await params;
+
+  if (!TRACKING_ID_REGEX.test(trackingId)) {
+    notFound();
+  }
+
   const data = await getShipmentByTrackingId(trackingId);
 
   if (!data) {
@@ -68,6 +76,11 @@ export default async function TrackingPage({ params }: TrackingPageProps) {
 
 export async function generateMetadata({ params }: TrackingPageProps) {
   const { trackingId } = await params;
+
+  if (!TRACKING_ID_REGEX.test(trackingId)) {
+    return { title: "Not Found — ShipLens" };
+  }
+
   return {
     title: `Tracking ${trackingId} — ShipLens`,
     description: `Track shipment ${trackingId} in real-time`,

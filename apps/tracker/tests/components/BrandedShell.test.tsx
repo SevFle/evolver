@@ -164,4 +164,82 @@ describe("BrandedShell", () => {
     const name = container.querySelector(".tracking-brand-name") as HTMLElement | null;
     expect(name?.style.color).toBe("rgb(255, 0, 0)");
   });
+
+  it("renders logo image for valid https URL on allowlisted domain", () => {
+    const { container } = render(
+      <BrandedShell logoUrl="https://example.com/logo.png">
+        <span>child</span>
+      </BrandedShell>
+    );
+    const img = container.querySelector("img");
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute("src")).toBe("https://example.com/logo.png");
+  });
+
+  it("falls back to tenant name for http logo URL", () => {
+    const { container, getByText } = render(
+      <BrandedShell tenantName="TestCo" logoUrl="http://evil.com/logo.png">
+        <span>child</span>
+      </BrandedShell>
+    );
+    expect(container.querySelector("img")).toBeNull();
+    expect(getByText("TestCo")).toBeDefined();
+  });
+
+  it("falls back to tenant name for non-allowlisted domain logo URL", () => {
+    const { container, getByText } = render(
+      <BrandedShell tenantName="TestCo" logoUrl="https://evil.com/logo.png">
+        <span>child</span>
+      </BrandedShell>
+    );
+    expect(container.querySelector("img")).toBeNull();
+    expect(getByText("TestCo")).toBeDefined();
+  });
+
+  it("falls back to tenant name for malformed logo URL", () => {
+    const { container, getByText } = render(
+      <BrandedShell tenantName="TestCo" logoUrl="not-a-url">
+        <span>child</span>
+      </BrandedShell>
+    );
+    expect(container.querySelector("img")).toBeNull();
+    expect(getByText("TestCo")).toBeDefined();
+  });
+
+  it("renders support link for valid https URL on allowlisted domain", () => {
+    const { getByText } = render(
+      <BrandedShell supportUrl="https://help.test.com">
+        <span>child</span>
+      </BrandedShell>
+    );
+    const link = getByText("Support");
+    expect(link.getAttribute("href")).toBe("https://help.test.com");
+  });
+
+  it("does not render support link for http URL", () => {
+    const { queryByText } = render(
+      <BrandedShell supportUrl="http://evil.com/support">
+        <span>child</span>
+      </BrandedShell>
+    );
+    expect(queryByText("Support")).toBeNull();
+  });
+
+  it("does not render support link for non-allowlisted domain", () => {
+    const { queryByText } = render(
+      <BrandedShell supportUrl="https://evil.com/support">
+        <span>child</span>
+      </BrandedShell>
+    );
+    expect(queryByText("Support")).toBeNull();
+  });
+
+  it("does not render support link for malformed URL", () => {
+    const { queryByText } = render(
+      <BrandedShell supportUrl="not-a-url">
+        <span>child</span>
+      </BrandedShell>
+    );
+    expect(queryByText("Support")).toBeNull();
+  });
 });

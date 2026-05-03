@@ -1,3 +1,21 @@
+const ALLOWED_URL_DOMAINS = [
+  "shiplens.io",
+  "example.com",
+  "test.com",
+];
+
+function isValidExternalUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return false;
+    return ALLOWED_URL_DOMAINS.some(
+      (d) => parsed.hostname === d || parsed.hostname.endsWith(`.${d}`)
+    );
+  } catch {
+    return false;
+  }
+}
+
 interface BrandedShellProps {
   children: React.ReactNode;
   tenantName?: string;
@@ -23,14 +41,16 @@ export function BrandedShell({
 }: BrandedShellProps) {
   const brandColor = primaryColor ?? "var(--color-primary)";
 
+  const safeLogoUrl = logoUrl && isValidExternalUrl(logoUrl) ? logoUrl : null;
+
   return (
     <div className="tracking-shell">
       <header className="tracking-header" style={{ borderColor: brandColor }}>
         <div className="tracking-header-inner">
           <div className="tracking-brand">
-            {logoUrl ? (
+            {safeLogoUrl ? (
               <img
-                src={logoUrl}
+                src={safeLogoUrl}
                 alt={tenantName}
                 className="tracking-logo"
               />
@@ -61,7 +81,7 @@ export function BrandedShell({
               {contactPhone}
             </a>
           )}
-          {supportUrl && (
+          {supportUrl && isValidExternalUrl(supportUrl) && (
             <a
               href={supportUrl}
               target="_blank"

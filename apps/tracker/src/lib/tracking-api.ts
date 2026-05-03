@@ -1,6 +1,7 @@
 import { resolveTenantFromHost } from "./tenant-resolver";
 
 const API_BASE = process.env.API_INTERNAL_URL ?? "http://localhost:3001";
+const TRACKING_ID_REGEX = /^[A-Za-z0-9_-]+$/;
 
 export interface TrackingMilestone {
   type: string;
@@ -39,6 +40,10 @@ export interface TrackingPageData {
 export async function getShipmentByTrackingId(
   trackingId: string
 ): Promise<TrackingPageData | null> {
+  if (!TRACKING_ID_REGEX.test(trackingId)) {
+    return null;
+  }
+
   const tenantSlug = await resolveTenantFromHost();
 
   try {

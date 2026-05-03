@@ -157,18 +157,50 @@ describe("getShipmentByTrackingId", () => {
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       json: () =>
-        Promise.resolve({ success: true, data: { trackingId: "SL 123" } }),
+        Promise.resolve({ success: true, data: { trackingId: "SL-123" } }),
     });
 
     const { getShipmentByTrackingId } = await import(
       "../src/lib/tracking-api"
     );
-    await getShipmentByTrackingId("SL 123");
+    await getShipmentByTrackingId("SL-123");
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      expect.stringContaining("/api/tracking-pages/SL%20123"),
+      expect.stringContaining("/api/tracking-pages/SL-123"),
       expect.anything()
     );
+  });
+
+  it("rejects tracking IDs with invalid characters", async () => {
+    mockHeaders("acme.shiplens.io");
+
+    const { getShipmentByTrackingId } = await import(
+      "../src/lib/tracking-api"
+    );
+
+    expect(await getShipmentByTrackingId("SL 123")).toBeNull();
+    expect(await getShipmentByTrackingId("SL/123")).toBeNull();
+    expect(await getShipmentByTrackingId("SL<script>")).toBeNull();
+    expect(await getShipmentByTrackingId("")).toBeNull();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it("accepts tracking IDs with valid characters", async () => {
+    mockHeaders("acme.shiplens.io");
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({ success: true, data: { trackingId: "SL_abc-123" } }),
+    });
+
+    const { getShipmentByTrackingId } = await import(
+      "../src/lib/tracking-api"
+    );
+    const result = await getShipmentByTrackingId("SL_abc-123");
+
+    expect(result?.trackingId).toBe("SL_abc-123");
+    expect(globalThis.fetch).toHaveBeenCalled();
   });
 
   it("returns full TrackingPageData with milestones and branding", async () => {
