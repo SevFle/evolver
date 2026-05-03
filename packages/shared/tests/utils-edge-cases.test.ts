@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { generateTrackingId, slugify, formatApiResponse, formatApiError, isValidEmail, isValidPhone } from "../src/utils";
+import { generateTrackingId, slugify, formatApiResponse, formatApiError, isValidEmail, isValidPhone } from "../src";
 
 describe("utils: boundary and edge cases", () => {
   describe("generateTrackingId", () => {

@@ -20,6 +20,10 @@ export interface ServerOptions {
   apiKeyResolver?: ApiKeyResolver;
 }
 
+export interface MainOptions {
+  skipEnvCheck?: boolean;
+}
+
 export function validateEnvironment(): void {
   const nodeEnv = process.env.NODE_ENV ?? "development";
   const isProduction = nodeEnv === "production";
@@ -72,10 +76,10 @@ export async function buildServer(options?: ServerOptions) {
   return server;
 }
 
-export async function main() {
+export async function main(options?: MainOptions) {
   let resolver: ApiKeyResolver | undefined;
 
-  if (!process.env.VITEST) {
+  if (!process.env.VITEST || options?.skipEnvCheck) {
     try {
       const { db } = await import("@shiplens/db");
       const { apiKeys } = await import("@shiplens/db");
