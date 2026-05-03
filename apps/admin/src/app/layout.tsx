@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/lib/auth-context";
+import { TopNav } from "@/components/TopNav";
 
 export const metadata: Metadata = {
   title: "ShipLens Admin",
@@ -13,7 +15,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AuthProvider>
+          <TopNav />
+          <main>{children}</main>
+        </AuthProvider>
+      </body>
     </html>
   );
 }
