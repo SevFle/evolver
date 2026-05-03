@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { FastifyInstance } from "fastify";
+import { hashApiKey } from "../src/plugins/auth";
 
 describe("main() – production startup", () => {
   const originalEnv = process.env;
@@ -23,12 +24,10 @@ describe("main() – production startup", () => {
 
     const server: FastifyInstance = await main();
 
-    try {
-      expect(server).toBeDefined();
-      expect(typeof server.close).toBe("function");
-    } finally {
-      await server.close();
-    }
+    expect(server).toBeDefined();
+    expect(typeof server.close).toBe("function");
+
+    await server.close();
   });
 
   it("uses default host and port when env vars are not set", async () => {
@@ -40,11 +39,7 @@ describe("main() – production startup", () => {
 
     const server: FastifyInstance = await main();
 
-    try {
-      expect(server).toBeDefined();
-    } finally {
-      await server.close();
-    }
+    await server.close();
   });
 
   it("exits with code 1 when server.listen fails", async () => {
@@ -81,15 +76,13 @@ describe("main() – production startup", () => {
 
     const server: FastifyInstance = await main();
 
-    try {
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Could not initialize database-backed")
-      );
-    } finally {
-      await server.close();
-      vi.doUnmock("@shiplens/db");
-      warnSpy.mockRestore();
-    }
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Could not initialize database-backed")
+    );
+
+    await server.close();
+    vi.doUnmock("@shiplens/db");
+    warnSpy.mockRestore();
   });
 
   it("initializes db-backed resolver and resolves tenant via api key", async () => {
@@ -131,19 +124,17 @@ describe("main() – production startup", () => {
 
     const server: FastifyInstance = await main();
 
-    try {
-      const res = await server.inject({
-        method: "GET",
-        url: "/api/shipments",
-        headers: { "x-api-key": "my-api-key" },
-      });
+    const res = await server.inject({
+      method: "GET",
+      url: "/api/shipments",
+      headers: { "x-api-key": "my-api-key" },
+    });
 
-      expect(res.statusCode).toBe(200);
-      expect(fakeSelect).toHaveBeenCalled();
-    } finally {
-      await server.close();
-      vi.doUnmock("@shiplens/db");
-      vi.doUnmock("drizzle-orm");
-    }
+    expect(res.statusCode).toBe(200);
+    expect(fakeSelect).toHaveBeenCalled();
+
+    await server.close();
+    vi.doUnmock("@shiplens/db");
+    vi.doUnmock("drizzle-orm");
   });
 });
