@@ -17,6 +17,7 @@
     "test:coverage": "turbo run test:coverage && node scripts/merge-coverage.mjs"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "turbo": "^2.5.0",
     "typescript": "^5.8.0"
   },
