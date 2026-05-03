@@ -9,12 +9,12 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
-    "test": "turbo run test:coverage && node scripts/merge-coverage.mjs",
-    "test:e2e": "npx playwright test --config e2e/playwright.config.ts",
+    "test": "npm run test:coverage",
+    "test:e2e": "playwright test --config e2e/playwright.config.ts",
+    "test:coverage": "turbo run test:coverage && node scripts/merge-coverage.mjs",
     "db:generate": "cd packages/db && drizzle-kit generate",
     "db:migrate": "cd packages/db && drizzle-kit migrate",
-    "db:push": "cd packages/db && drizzle-kit push",
-    "test:coverage": "turbo run test:coverage && node scripts/merge-coverage.mjs"
+    "db:push": "cd packages/db && drizzle-kit push"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",

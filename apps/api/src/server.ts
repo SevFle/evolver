@@ -72,7 +72,7 @@ export async function buildServer(options?: ServerOptions) {
   return server;
 }
 
-async function main() {
+export async function main() {
   let resolver: ApiKeyResolver | undefined;
 
   if (!process.env.VITEST) {
@@ -108,6 +108,8 @@ async function main() {
     server.log.error(err);
     process.exit(1);
   }
+
+  return server;
 }
 
 if (!process.env.VITEST) {
