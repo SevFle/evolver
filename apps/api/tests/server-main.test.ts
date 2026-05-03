@@ -53,9 +53,13 @@ describe("main() – production startup", () => {
 
     const { main } = await import("../src/server");
 
-    await main();
+    const server = await main();
 
-    expect(exitSpy).toHaveBeenCalledWith(1);
+    try {
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    } finally {
+      await server.close();
+    }
 
     exitSpy.mockRestore();
   });
@@ -68,10 +72,11 @@ describe("main() – production startup", () => {
 
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    vi.doMock("@shiplens/db", () => {
-      throw new Error("no db module");
-    });
+    vi.doMock("@shiplens/db", () => ({
+      db: { select: () => { throw new Error("no db module") } },
+    }));
 
+    vi.resetModules();
     const { main } = await import("../src/server");
 
     const server: FastifyInstance = await main();
@@ -120,6 +125,7 @@ describe("main() – production startup", () => {
       and: mockAnd,
     }));
 
+    vi.resetModules();
     const { main } = await import("../src/server");
 
     const server: FastifyInstance = await main();
