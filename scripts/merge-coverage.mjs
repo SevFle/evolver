@@ -8,13 +8,23 @@ let totalLines = 0, coveredLines = 0, totalBranches = 0, coveredBranches = 0;
 let totalFunctions = 0, coveredFunctions = 0, totalStatements = 0, coveredStatements = 0;
 const perFile = {};
 
+function normalizeFilePath(ws, filePath) {
+  if (filePath === "total") return null;
+  const wsSegment = "/" + ws + "/";
+  const wsIndex = filePath.indexOf(wsSegment);
+  if (wsIndex !== -1) {
+    return join(ws, filePath.substring(wsIndex + wsSegment.length));
+  }
+  return join(ws, filePath);
+}
+
 for (const ws of workspaces) {
   const summaryPath = join(root, ws, "coverage", "coverage-summary.json");
   if (!existsSync(summaryPath)) continue;
   const data = JSON.parse(readFileSync(summaryPath, "utf8"));
   for (const [filePath, fileData] of Object.entries(data)) {
     if (filePath === "total") continue;
-    const key = join(ws, filePath);
+    const key = normalizeFilePath(ws, filePath);
     perFile[key] = fileData;
     totalLines += fileData.lines.total;
     coveredLines += fileData.lines.covered;
