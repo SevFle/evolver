@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import { isValidTrackingId } from "@/lib/tracking-id-validation";
 
 interface OldTrackingPageProps {
   params: Promise<{ trackingId: string }>;
@@ -6,5 +8,10 @@ interface OldTrackingPageProps {
 
 export default async function OldTrackingPage({ params }: OldTrackingPageProps) {
   const { trackingId } = await params;
-  redirect(`/track/${trackingId}`);
+
+  if (!isValidTrackingId(trackingId)) {
+    notFound();
+  }
+
+  redirect(`/track/${encodeURIComponent(trackingId)}`);
 }

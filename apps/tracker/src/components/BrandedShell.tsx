@@ -1,3 +1,5 @@
+import { sanitizeUrl } from "@/lib/url-sanitizer";
+
 interface BrandedShellProps {
   children: React.ReactNode;
   tenantName?: string;
@@ -22,15 +24,17 @@ export function BrandedShell({
   customFooterText,
 }: BrandedShellProps) {
   const brandColor = primaryColor ?? "var(--color-primary)";
+  const safeLogoUrl = sanitizeUrl(logoUrl);
+  const safeSupportUrl = sanitizeUrl(supportUrl);
 
   return (
     <div className="tracking-shell">
       <header className="tracking-header" style={{ borderColor: brandColor }}>
         <div className="tracking-header-inner">
           <div className="tracking-brand">
-            {logoUrl ? (
+            {safeLogoUrl ? (
               <img
-                src={logoUrl}
+                src={safeLogoUrl}
                 alt={tenantName}
                 className="tracking-logo"
               />
@@ -61,9 +65,9 @@ export function BrandedShell({
               {contactPhone}
             </a>
           )}
-          {supportUrl && (
+          {safeSupportUrl && (
             <a
-              href={supportUrl}
+              href={safeSupportUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="tracking-footer-link"

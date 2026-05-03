@@ -1,4 +1,6 @@
+import { notFound } from "next/navigation";
 import { getShipmentByTrackingId } from "@/lib/tracking-api";
+import { isValidTrackingId } from "@/lib/tracking-id-validation";
 import { BrandedShell } from "@/components/BrandedShell";
 import { ShipmentHeader } from "@/components/ShipmentHeader";
 import { MilestoneTimeline } from "@/components/MilestoneTimeline";
@@ -9,6 +11,11 @@ interface TrackingPageProps {
 
 export default async function TrackingPage({ params }: TrackingPageProps) {
   const { trackingId } = await params;
+
+  if (!isValidTrackingId(trackingId)) {
+    notFound();
+  }
+
   const data = await getShipmentByTrackingId(trackingId);
 
   if (!data) {
