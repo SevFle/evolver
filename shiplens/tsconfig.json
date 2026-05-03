@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
+    "incremental": true,
+    "paths": {
+      "@shiplens/db": ["./packages/db/src"],
+      "@shiplens/queue": ["./packages/queue/src"],
+      "@shiplens/types": ["./packages/types/src"],
+      "@shiplens/config": ["./packages/config/src"]
+    }
+  },
+  "exclude": ["node_modules", "dist", ".next"]
+}
