@@ -27,7 +27,7 @@ describe("main() – production startup", () => {
       expect(server).toBeDefined();
       expect(typeof server.close).toBe("function");
     } finally {
-      await server.close();
+      if (server) await server.close();
     }
   });
 
@@ -43,7 +43,7 @@ describe("main() – production startup", () => {
     try {
       expect(server).toBeDefined();
     } finally {
-      await server.close();
+      if (server) await server.close();
     }
   });
 
@@ -86,9 +86,11 @@ describe("main() – production startup", () => {
         expect.stringContaining("Could not initialize database-backed")
       );
     } finally {
-      await server.close();
-      vi.doUnmock("@shiplens/db");
-      warnSpy.mockRestore();
+      await Promise.allSettled([
+        server ? server.close() : Promise.resolve(),
+        Promise.resolve().then(() => vi.doUnmock("@shiplens/db")),
+        Promise.resolve().then(() => warnSpy.mockRestore()),
+      ]);
     }
   });
 
@@ -141,9 +143,11 @@ describe("main() – production startup", () => {
       expect(res.statusCode).toBe(200);
       expect(fakeSelect).toHaveBeenCalled();
     } finally {
-      await server.close();
-      vi.doUnmock("@shiplens/db");
-      vi.doUnmock("drizzle-orm");
+      await Promise.allSettled([
+        server ? server.close() : Promise.resolve(),
+        Promise.resolve().then(() => vi.doUnmock("@shiplens/db")),
+        Promise.resolve().then(() => vi.doUnmock("drizzle-orm")),
+      ]);
     }
   });
 });
