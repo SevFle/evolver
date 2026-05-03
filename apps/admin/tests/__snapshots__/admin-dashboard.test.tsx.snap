@@ -1,0 +1,48 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`AdminDashboard > snapshot matches 1`] = `
+<div>
+  <div
+    style="padding: 2rem; max-width: 1200px; margin: 0px auto;"
+  >
+    <h1
+      style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;"
+    >
+      ShipLens Admin
+    </h1>
+    <nav
+      style="display: flex; gap: 1rem; margin-bottom: 2rem;"
+    >
+      <a
+        href="/shipments"
+        style="color: var(--color-primary);"
+      >
+        Shipments
+      </a>
+      <a
+        href="/settings"
+        style="color: var(--color-primary);"
+      >
+        Settings
+      </a>
+      <a
+        href="/api-keys"
+        style="color: var(--color-primary);"
+      >
+        API Keys
+      </a>
+      <a
+        href="/notifications"
+        style="color: var(--color-primary);"
+      >
+        Notifications
+      </a>
+    </nav>
+    <p
+      style="color: var(--color-muted);"
+    >
+      Welcome to ShipLens. Select a section to get started.
+    </p>
+  </div>
+</div>
+`;
