@@ -9,11 +9,12 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
-    "test": "turbo test",
+    "test": "turbo run test:coverage && node scripts/merge-coverage.mjs",
     "test:e2e": "playwright test --config e2e/playwright.config.ts",
     "db:generate": "drizzle-kit generate --config packages/db/drizzle.config.ts",
     "db:migrate": "drizzle-kit migrate --config packages/db/drizzle.config.ts",
-    "db:push": "drizzle-kit push --config packages/db/drizzle.config.ts"
+    "db:push": "drizzle-kit push --config packages/db/drizzle.config.ts",
+    "test:coverage": "turbo run test:coverage && node scripts/merge-coverage.mjs"
   },
   "devDependencies": {
     "turbo": "^2.5.0",
