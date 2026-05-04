@@ -16,9 +16,15 @@ import { notificationRoutes } from "./routes/notifications";
 import { apiKeyRoutes } from "./routes/api-keys";
 import { csvImportRoutes } from "./routes/csv-import";
 import { trackingPageRoutes } from "./routes/tracking-pages";
+import { EmailService, type EmailProvider, createEmailProvider } from "./services/email";
+import { NotificationDispatcher } from "./services/notification-dispatcher";
+import { InMemoryNotificationStore } from "./services/in-memory-store";
+import "./types";
 
 export interface ServerOptions {
   apiKeyResolver?: ApiKeyResolver;
+  emailProvider?: EmailProvider;
+  notificationStore?: import("./services/notification-dispatcher").NotificationStore;
 }
 
 export function validateEnvironment(): void {
@@ -61,6 +67,14 @@ export async function buildServer(options?: ServerOptions) {
   });
   await server.register(csrfPlugin);
   await server.register(tenantResolverPlugin);
+
+  const emailProvider = options?.emailProvider ?? createEmailProvider();
+  const emailService = new EmailService(emailProvider);
+  const notificationStore = options?.notificationStore ?? new InMemoryNotificationStore();
+  const notificationDispatcher = new NotificationDispatcher(emailService, notificationStore);
+
+  server.decorate("notificationDispatcher", notificationDispatcher);
+  server.decorate("notificationStore", notificationStore);
 
   await server.register(healthRoutes, { prefix: "/api" });
   await server.register(shipmentRoutes, { prefix: "/api/shipments" });

@@ -111,27 +111,44 @@ export const notificationRules = pgTable("notification_rules", {
   milestoneType: milestoneTypeEnum("milestone_type").notNull(),
   channel: notificationChannelEnum("channel").default("email").notNull(),
   templateId: varchar("template_id", { length: 255 }),
+  subjectTemplate: varchar("subject_template", { length: 500 }),
+  bodyTemplate: text("body_template"),
   enabled: boolean("enabled").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const notifications = pgTable("notifications", {
   id: uuid("id").defaultRandom().primaryKey(),
+  tenantId: uuid("tenant_id")
+    .references(() => tenants.id, { onDelete: "cascade" })
+    .notNull(),
   shipmentId: uuid("shipment_id")
     .references(() => shipments.id, { onDelete: "cascade" })
     .notNull(),
+  milestoneId: uuid("milestone_id")
+    .references(() => milestones.id, { onDelete: "set null" }),
+  ruleId: uuid("rule_id")
+    .references(() => notificationRules.id, { onDelete: "set null" }),
   channel: notificationChannelEnum("channel").notNull(),
   recipient: varchar("recipient", { length: 255 }).notNull(),
+  subject: varchar("subject", { length: 500 }),
+  bodySent: text("body_sent"),
   status: varchar("status", { length: 50 }).default("pending").notNull(),
   providerId: varchar("provider_id", { length: 255 }),
+  errorMessage: text("error_message"),
+  retryCount: integer("retry_count").default(0).notNull(),
   sentAt: timestamp("sent_at"),
+  deliveredAt: timestamp("delivered_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const tenantsRelations = relations(tenants, ({ many }) => ({
   shipments: many(shipments),
   apiKeys: many(apiKeys),
   notificationRules: many(notificationRules),
+  notifications: many(notifications),
 }));
 
 export const shipmentsRelations = relations(shipments, ({ one, many }) => ({
@@ -157,16 +174,29 @@ export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
   }),
 }));
 
-export const notificationRulesRelations = relations(notificationRules, ({ one }) => ({
+export const notificationRulesRelations = relations(notificationRules, ({ one, many }) => ({
   tenant: one(tenants, {
     fields: [notificationRules.tenantId],
     references: [tenants.id],
   }),
+  notifications: many(notifications),
 }));
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [notifications.tenantId],
+    references: [tenants.id],
+  }),
   shipment: one(shipments, {
     fields: [notifications.shipmentId],
     references: [shipments.id],
+  }),
+  milestone: one(milestones, {
+    fields: [notifications.milestoneId],
+    references: [milestones.id],
+  }),
+  rule: one(notificationRules, {
+    fields: [notifications.ruleId],
+    references: [notificationRules.id],
   }),
 }));
