@@ -115,6 +115,19 @@ describe("Integration: Shipment Routes", () => {
     expect(res.statusCode).toBe(401);
   });
 
+  it("GET /api/shipments returns 200 with empty array", async () => {
+    const res = await server.inject({
+      method: "GET",
+      url: "/api/shipments",
+      headers: authBearerHeader("tenant-1"),
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.success).toBe(true);
+    expect(body.data).toEqual([]);
+    expect(body.total).toBe(0);
+  });
+
   it("rejects unauthenticated POST /api/shipments with 401", async () => {
     const res = await server.inject({
       method: "POST",

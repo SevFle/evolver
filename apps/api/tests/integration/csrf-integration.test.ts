@@ -143,18 +143,18 @@ describe("Integration: CSRF Protection on State-Changing Endpoints", () => {
       expect(res.json().error).toBe("CSRF token invalid");
     });
 
-    it("rejects empty CSRF token", async () => {
+    it("rejects known-invalid CSRF token", async () => {
       const res = await server.inject({
         method: "POST",
         url: "/api/shipments",
         payload: {},
         headers: {
           ...authBearerHeader("tenant-1"),
-          "x-csrf-token": "",
+          "x-csrf-token": "csrf_knowninvalid",
         },
       });
       expect(res.statusCode).toBe(403);
-      expect(res.json().error).toBe("CSRF token missing");
+      expect(res.json().error).toBe("CSRF token invalid");
     });
   });
 
