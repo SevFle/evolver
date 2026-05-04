@@ -1,16 +1,70 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
+let authToken: string | null = null;
+let csrfToken: string | null = null;
+
+export function setAuthToken(token: string | null): void {
+  authToken = token;
+}
+
+export function getAuthToken(): string | null {
+  return authToken;
+}
+
+export function setCsrfToken(token: string | null): void {
+  csrfToken = token;
+}
+
+export function getCsrfToken(): string | null {
+  return csrfToken;
+}
+
+export function clearSession(): void {
+  authToken = null;
+  csrfToken = null;
+}
+
+export function hasValidSession(): boolean {
+  return authToken !== null;
+}
+
+function buildHeaders(options: RequestInit): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (authToken) {
+    headers["authorization"] = `Bearer ${authToken}`;
+  }
+
+  if (csrfToken) {
+    headers["x-csrf-token"] = csrfToken;
+  }
+
+  if (options.headers) {
+    const incoming = options.headers as Record<string, string>;
+    for (const [key, value] of Object.entries(incoming)) {
+      headers[key.toLowerCase()] = value;
+    }
+  }
+
+  return headers;
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
+  const headers = buildHeaders(options);
+
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
+    headers,
   });
+
+  if (res.status === 401) {
+    clearSession();
+  }
 
   if (!res.ok) {
     throw new Error(`API error: ${res.status} ${res.statusText}`);

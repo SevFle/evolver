@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { buildServer } from "../../src/server";
-import { authBearerHeader, apiKeyHeader, DEFAULT_SECRET } from "../helpers/auth";
+import { authBearerHeader, apiKeyHeader, DEFAULT_SECRET, createCsrfToken } from "../helpers/auth";
 import { hashApiKey } from "../../src/plugins/auth";
 import jwt from "jsonwebtoken";
 
@@ -137,7 +137,7 @@ describe("Integration: Comprehensive Edge Cases", () => {
         method: "POST",
         url: "/api/shipments",
         payload: { trackingId: "SL-NEW", origin: "NYC", destination: "LAX" },
-        headers: authBearerHeader("t1"),
+        headers: { ...authBearerHeader("t1"), "x-csrf-token": createCsrfToken() },
       });
       expect(res.statusCode).toBe(201);
     });
@@ -147,7 +147,7 @@ describe("Integration: Comprehensive Edge Cases", () => {
         method: "PATCH",
         url: "/api/tenants/current",
         payload: { name: "Updated" },
-        headers: authBearerHeader("t1"),
+        headers: { ...authBearerHeader("t1"), "x-csrf-token": createCsrfToken() },
       });
       expect(res.statusCode).toBe(200);
     });
@@ -156,7 +156,7 @@ describe("Integration: Comprehensive Edge Cases", () => {
       const res = await server.inject({
         method: "DELETE",
         url: "/api/api-keys/key-1",
-        headers: authBearerHeader("t1"),
+        headers: { ...authBearerHeader("t1"), "x-csrf-token": createCsrfToken() },
       });
       expect(res.statusCode).toBe(200);
     });
@@ -236,7 +236,7 @@ describe("Integration: Comprehensive Edge Cases", () => {
   describe("CSV import job status", () => {
     it("returns pending status for any job ID", async () => {
       const jobIds = ["job-1", "job-uuid-123", "JOB_UPPER"];
-      const hdrs = authBearerHeader("t1");
+      const hdrs = { ...authBearerHeader("t1"), "x-csrf-token": createCsrfToken() };
 
       for (const jobId of jobIds) {
         const res = await server.inject({

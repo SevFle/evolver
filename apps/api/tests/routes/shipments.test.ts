@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { buildServer } from "../../src/server";
-import { authBearerHeader, apiKeyHeader, DEFAULT_SECRET } from "../helpers/auth";
+import { authBearerHeader, apiKeyHeader, DEFAULT_SECRET, createCsrfToken } from "../helpers/auth";
 import { hashApiKey } from "../../src/plugins/auth";
 
 const mockResolver = async (keyHash: string) => {
@@ -58,7 +58,7 @@ describe("Shipment Routes", () => {
         method: "POST",
         url: "/api/shipments",
         payload: { origin: "Shanghai", destination: "LA" },
-        headers: authBearerHeader("t1"),
+        headers: { ...authBearerHeader("t1"), "x-csrf-token": createCsrfToken() },
       });
       expect(res.statusCode).toBe(201);
       expect(res.json().success).toBe(true);
@@ -69,7 +69,7 @@ describe("Shipment Routes", () => {
       const res = await server.inject({
         method: "POST",
         url: "/api/shipments",
-        headers: authBearerHeader("t1"),
+        headers: { ...authBearerHeader("t1"), "x-csrf-token": createCsrfToken() },
       });
       expect(res.statusCode).toBe(201);
     });
