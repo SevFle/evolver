@@ -339,7 +339,7 @@ describe("Integration: Auth Login Flow", () => {
       const createRule = await server.inject({
         method: "POST",
         url: "/api/notifications/rules",
-        payload: { type: "email" },
+        payload: { milestoneType: "delivered", channel: "email" },
         headers,
       });
       expect(createRule.statusCode).toBe(201);

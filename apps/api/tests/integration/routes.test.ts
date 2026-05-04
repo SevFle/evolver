@@ -164,7 +164,7 @@ describe("Integration: Milestone Routes", () => {
     const res = await server.inject({
       method: "POST",
       url: "/api/milestones",
-      payload: {},
+      payload: { shipmentId: "ship-1", type: "picked_up" },
       headers: authHeadersWithCsrf("tenant-1"),
     });
     expect(res.statusCode).toBe(201);
@@ -283,7 +283,7 @@ describe("Integration: Notification Routes", () => {
     const res = await server.inject({
       method: "POST",
       url: "/api/notifications/rules",
-      payload: {},
+      payload: { milestoneType: "delivered", channel: "email" },
       headers: authHeadersWithCsrf("tenant-1"),
     });
     expect(res.statusCode).toBe(201);

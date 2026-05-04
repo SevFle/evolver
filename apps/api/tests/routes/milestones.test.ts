@@ -59,20 +59,34 @@ describe("Milestone Routes", () => {
       const res = await server.inject({
         method: "POST",
         url: "/api/milestones",
-        payload: { type: "picked_up", description: "Picked up" },
+        payload: { shipmentId: "ship-1", type: "picked_up", description: "Picked up" },
         headers: { ...authBearerHeader("t1"), "x-csrf-token": createCsrfToken() },
       });
       expect(res.statusCode).toBe(201);
       expect(res.json().message).toBe("Milestone created");
+      expect(res.json().data.shipmentId).toBe("ship-1");
+      expect(res.json().data.type).toBe("picked_up");
     });
 
-    it("accepts empty payload", async () => {
+    it("returns 400 when shipmentId is missing", async () => {
       const res = await server.inject({
         method: "POST",
         url: "/api/milestones",
+        payload: { type: "picked_up" },
         headers: { ...authBearerHeader("t1"), "x-csrf-token": createCsrfToken() },
       });
-      expect(res.statusCode).toBe(201);
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error).toBe("shipmentId and type are required");
+    });
+
+    it("returns 400 when type is missing", async () => {
+      const res = await server.inject({
+        method: "POST",
+        url: "/api/milestones",
+        payload: { shipmentId: "ship-1" },
+        headers: { ...authBearerHeader("t1"), "x-csrf-token": createCsrfToken() },
+      });
+      expect(res.statusCode).toBe(400);
     });
 
     it("returns 401 without auth", async () => {

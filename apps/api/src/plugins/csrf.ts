@@ -55,8 +55,18 @@ export function verifyCsrfToken(token: string, secret: string): boolean {
 }
 
 async function csrfProtection(server: FastifyInstance) {
-  const csrfSecret =
-    process.env.CSRF_SECRET || process.env.JWT_SECRET || generateCsrfSecret();
+  let csrfSecret: string;
+  if (process.env.CSRF_SECRET) {
+    csrfSecret = process.env.CSRF_SECRET;
+  } else if (process.env.JWT_SECRET) {
+    csrfSecret = process.env.JWT_SECRET;
+  } else {
+    csrfSecret = generateCsrfSecret();
+    server.log.warn(
+      "CSRF_SECRET and JWT_SECRET not set. A volatile CSRF secret has been generated. " +
+        "Tokens will not survive server restarts. Set CSRF_SECRET in production."
+    );
+  }
 
   server.decorate("generateCsrfToken", () => createCsrfToken(csrfSecret));
 
