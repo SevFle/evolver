@@ -30,7 +30,7 @@ export function hasValidSession(): boolean {
 
 function buildHeaders(options: RequestInit): Record<string, string> {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    "content-type": "application/json",
   };
 
   if (authToken) {
@@ -74,10 +74,12 @@ async function request<T>(
 }
 
 export const apiClient = {
-  get: <T>(path: string) => request<T>(path, { method: "GET" }),
-  post: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "POST", body: JSON.stringify(body) }),
-  patch: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
-  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  get: <T>(path: string, init?: RequestInit) =>
+    request<T>(path, { method: "GET", ...init }),
+  post: <T>(path: string, body?: unknown, init?: RequestInit) =>
+    request<T>(path, { method: "POST", body: JSON.stringify(body), ...init }),
+  patch: <T>(path: string, body?: unknown, init?: RequestInit) =>
+    request<T>(path, { method: "PATCH", body: JSON.stringify(body), ...init }),
+  delete: <T>(path: string, init?: RequestInit) =>
+    request<T>(path, { method: "DELETE", ...init }),
 };

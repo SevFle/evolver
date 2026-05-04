@@ -118,7 +118,7 @@ describe("apiClient", () => {
     expect(globalThis.fetch).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({
-        headers: expect.objectContaining({ "Content-Type": "application/json" }),
+        headers: expect.objectContaining({ "content-type": "application/json" }),
       })
     );
   });
