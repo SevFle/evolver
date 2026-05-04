@@ -112,6 +112,7 @@ export async function main() {
   return server;
 }
 
+/* v8 ignore next 3 */
 if (!process.env.VITEST) {
   main();
 }
