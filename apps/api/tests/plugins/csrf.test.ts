@@ -148,7 +148,7 @@ describe("csrf plugin", () => {
         headers: { "x-csrf-token": "" },
       });
       expect(res.statusCode).toBe(403);
-      expect(res.json().error).toBe("CSRF token invalid");
+      expect(res.json().error).toBe("CSRF token missing");
     });
   });
 

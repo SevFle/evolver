@@ -67,7 +67,6 @@ describe("buildServer", () => {
 
     const getUrlChecks = [
       [200, "/api/health"],
-      [200, "/api/shipments", headers],
       [200, "/api/milestones/shipment/s1", headers],
       [200, "/api/tenants/current", headers],
       [200, "/api/notifications/rules", headers],

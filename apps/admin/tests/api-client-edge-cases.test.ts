@@ -40,7 +40,7 @@ describe("apiClient: edge cases", () => {
 
     const callArgs = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
       .calls[0];
-    expect(callArgs[1].headers["Content-Type"]).toBe("application/json");
+    expect(callArgs[1].headers["content-type"]).toBe("application/json");
   });
 
   it("PATCH with no body sends undefined", async () => {

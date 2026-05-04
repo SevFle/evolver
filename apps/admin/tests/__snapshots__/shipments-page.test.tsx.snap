@@ -10,11 +10,58 @@ exports[`ShipmentsPage > snapshot matches 1`] = `
     >
       Shipments
     </h1>
-    <p
-      style="color: var(--color-muted);"
+    <div
+      style="background-color: var(--color-surface); border-radius: 0.5rem; border: 1px solid var(--color-border); overflow: hidden;"
     >
-      Shipment management coming soon.
-    </p>
+      <div
+        style="padding: 1rem 1rem 0px;"
+      >
+        <div
+          style="margin-bottom: 1rem;"
+        >
+          <input
+            placeholder="Search by tracking ID, customer, origin, destination..."
+            style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--color-border); border-radius: 0.375rem; font-size: 0.875rem; outline: none; margin-bottom: 0.75rem; background-color: var(--color-surface);"
+            type="text"
+            value=""
+          />
+          <div
+            style="display: flex; gap: 0.25rem; border-bottom: 1px solid var(--color-border);"
+          >
+            <button
+              style="padding: 0.375rem 0.75rem; font-size: 0.8125rem; font-weight: 600; border-top: medium; border-right: medium; border-bottom: 2px solid var(--color-primary); border-left: medium; border-image: none; background: none; color: var(--color-primary); cursor: pointer; white-space: nowrap;"
+            >
+              All
+            </button>
+            <button
+              style="padding: 0.375rem 0.75rem; font-size: 0.8125rem; font-weight: 400; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; background: none; color: var(--color-muted); cursor: pointer; white-space: nowrap;"
+            >
+              In Transit
+            </button>
+            <button
+              style="padding: 0.375rem 0.75rem; font-size: 0.8125rem; font-weight: 400; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; background: none; color: var(--color-muted); cursor: pointer; white-space: nowrap;"
+            >
+              Delivered
+            </button>
+            <button
+              style="padding: 0.375rem 0.75rem; font-size: 0.8125rem; font-weight: 400; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; background: none; color: var(--color-muted); cursor: pointer; white-space: nowrap;"
+            >
+              Delayed
+            </button>
+            <button
+              style="padding: 0.375rem 0.75rem; font-size: 0.8125rem; font-weight: 400; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; background: none; color: var(--color-muted); cursor: pointer; white-space: nowrap;"
+            >
+              Customs
+            </button>
+          </div>
+        </div>
+      </div>
+      <div
+        style="padding: 2rem; text-align: center; color: var(--color-muted);"
+      >
+        Loading shipments...
+      </div>
+    </div>
   </div>
 </div>
 `;

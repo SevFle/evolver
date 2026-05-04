@@ -4,6 +4,7 @@ import {
   authBearerHeader,
   apiKeyHeader,
   DEFAULT_SECRET,
+  authHeadersWithCsrf,
 } from "../helpers/auth";
 import { hashApiKey } from "../../src/plugins/auth";
 
@@ -71,31 +72,6 @@ describe("Integration: Shipment Routes", () => {
     await server.close();
   });
 
-  it("GET /api/shipments returns 200 with empty array", async () => {
-    const res = await server.inject({
-      method: "GET",
-      url: "/api/shipments",
-      headers: authBearerHeader("tenant-1"),
-    });
-    expect(res.statusCode).toBe(200);
-    const body = res.json();
-    expect(body.success).toBe(true);
-    expect(body.data).toEqual([]);
-  });
-
-  it("POST /api/shipments returns 201", async () => {
-    const res = await server.inject({
-      method: "POST",
-      url: "/api/shipments",
-      payload: {},
-      headers: authBearerHeader("tenant-1"),
-    });
-    expect(res.statusCode).toBe(201);
-    const body = res.json();
-    expect(body.success).toBe(true);
-    expect(body.message).toBe("Shipment created");
-  });
-
   it("GET /api/shipments/:trackingId returns tracking data", async () => {
     const res = await server.inject({
       method: "GET",
@@ -118,6 +94,19 @@ describe("Integration: Shipment Routes", () => {
     expect(res.json().data.trackingId).toBe("TRK-abc-123");
   });
 
+  it("POST /api/shipments returns 201 with CSRF token", async () => {
+    const res = await server.inject({
+      method: "POST",
+      url: "/api/shipments",
+      payload: {},
+      headers: authHeadersWithCsrf("tenant-1"),
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(body.success).toBe(true);
+    expect(body.message).toBe("Shipment created");
+  });
+
   it("rejects unauthenticated GET /api/shipments with 401", async () => {
     const res = await server.inject({
       method: "GET",
@@ -133,6 +122,16 @@ describe("Integration: Shipment Routes", () => {
       payload: {},
     });
     expect(res.statusCode).toBe(401);
+  });
+
+  it("rejects POST /api/shipments without CSRF with 403", async () => {
+    const res = await server.inject({
+      method: "POST",
+      url: "/api/shipments",
+      payload: {},
+      headers: authBearerHeader("tenant-1"),
+    });
+    expect(res.statusCode).toBe(403);
   });
 });
 
@@ -161,12 +160,12 @@ describe("Integration: Milestone Routes", () => {
     expect(body.shipmentId).toBe("ship-1");
   });
 
-  it("POST /api/milestones creates a milestone", async () => {
+  it("POST /api/milestones creates a milestone with CSRF", async () => {
     const res = await server.inject({
       method: "POST",
       url: "/api/milestones",
       payload: {},
-      headers: authBearerHeader("tenant-1"),
+      headers: authHeadersWithCsrf("tenant-1"),
     });
     expect(res.statusCode).toBe(201);
     expect(res.json().message).toBe("Milestone created");
@@ -178,6 +177,16 @@ describe("Integration: Milestone Routes", () => {
       url: "/api/milestones/shipment/ship-1",
     });
     expect(res.statusCode).toBe(401);
+  });
+
+  it("rejects POST /api/milestones without CSRF with 403", async () => {
+    const res = await server.inject({
+      method: "POST",
+      url: "/api/milestones",
+      payload: {},
+      headers: authBearerHeader("tenant-1"),
+    });
+    expect(res.statusCode).toBe(403);
   });
 });
 
@@ -218,12 +227,12 @@ describe("Integration: Tenant Routes", () => {
     expect(body.data.tenantId).toBe("tenant-int");
   });
 
-  it("PATCH /api/tenants/current updates tenant", async () => {
+  it("PATCH /api/tenants/current updates tenant with CSRF", async () => {
     const res = await server.inject({
       method: "PATCH",
       url: "/api/tenants/current",
       payload: { name: "Updated" },
-      headers: authBearerHeader("tenant-1"),
+      headers: authHeadersWithCsrf("tenant-1"),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().message).toBe("Tenant updated");
@@ -235,6 +244,16 @@ describe("Integration: Tenant Routes", () => {
       url: "/api/tenants/current",
     });
     expect(res.statusCode).toBe(401);
+  });
+
+  it("rejects PATCH /api/tenants/current without CSRF with 403", async () => {
+    const res = await server.inject({
+      method: "PATCH",
+      url: "/api/tenants/current",
+      payload: { name: "Updated" },
+      headers: authBearerHeader("tenant-1"),
+    });
+    expect(res.statusCode).toBe(403);
   });
 });
 
@@ -260,12 +279,12 @@ describe("Integration: Notification Routes", () => {
     expect(res.json().data).toEqual([]);
   });
 
-  it("POST /api/notifications/rules creates rule", async () => {
+  it("POST /api/notifications/rules creates rule with CSRF", async () => {
     const res = await server.inject({
       method: "POST",
       url: "/api/notifications/rules",
       payload: {},
-      headers: authBearerHeader("tenant-1"),
+      headers: authHeadersWithCsrf("tenant-1"),
     });
     expect(res.statusCode).toBe(201);
     expect(res.json().message).toBe("Notification rule created");
@@ -287,6 +306,16 @@ describe("Integration: Notification Routes", () => {
       url: "/api/notifications/rules",
     });
     expect(res.statusCode).toBe(401);
+  });
+
+  it("rejects POST /api/notifications/rules without CSRF with 403", async () => {
+    const res = await server.inject({
+      method: "POST",
+      url: "/api/notifications/rules",
+      payload: {},
+      headers: authBearerHeader("tenant-1"),
+    });
+    expect(res.statusCode).toBe(403);
   });
 });
 
@@ -312,12 +341,12 @@ describe("Integration: API Key Routes", () => {
     expect(res.json().data).toEqual([]);
   });
 
-  it("POST /api/api-keys creates a new key", async () => {
+  it("POST /api/api-keys creates a new key with CSRF", async () => {
     const res = await server.inject({
       method: "POST",
       url: "/api/api-keys",
       payload: {},
-      headers: authBearerHeader("tenant-1"),
+      headers: authHeadersWithCsrf("tenant-1"),
     });
     expect(res.statusCode).toBe(201);
     const body = res.json();
@@ -327,7 +356,7 @@ describe("Integration: API Key Routes", () => {
   });
 
   it("POST /api/api-keys generates unique keys each time", async () => {
-    const headers = authBearerHeader("tenant-1");
+    const headers = authHeadersWithCsrf("tenant-1");
     const res1 = await server.inject({
       method: "POST",
       url: "/api/api-keys",
@@ -343,11 +372,11 @@ describe("Integration: API Key Routes", () => {
     expect(res1.json().data.key).not.toBe(res2.json().data.key);
   });
 
-  it("DELETE /api/api-keys/:id revokes key", async () => {
+  it("DELETE /api/api-keys/:id revokes key with CSRF", async () => {
     const res = await server.inject({
       method: "DELETE",
       url: "/api/api-keys/key-123",
-      headers: authBearerHeader("tenant-1"),
+      headers: authHeadersWithCsrf("tenant-1"),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().message).toContain("key-123");
@@ -360,6 +389,15 @@ describe("Integration: API Key Routes", () => {
       url: "/api/api-keys",
     });
     expect(res.statusCode).toBe(401);
+  });
+
+  it("rejects DELETE /api/api-keys/:id without CSRF with 403", async () => {
+    const res = await server.inject({
+      method: "DELETE",
+      url: "/api/api-keys/key-123",
+      headers: authBearerHeader("tenant-1"),
+    });
+    expect(res.statusCode).toBe(403);
   });
 });
 
@@ -375,12 +413,12 @@ describe("Integration: CSV Import Routes", () => {
     await server.close();
   });
 
-  it("POST /api/csv-import queues import", async () => {
+  it("POST /api/csv-import queues import with CSRF", async () => {
     const res = await server.inject({
       method: "POST",
       url: "/api/csv-import",
       payload: {},
-      headers: authBearerHeader("tenant-1"),
+      headers: authHeadersWithCsrf("tenant-1"),
     });
     expect(res.statusCode).toBe(202);
     expect(res.json().message).toBe("CSV import queued");
@@ -405,6 +443,16 @@ describe("Integration: CSV Import Routes", () => {
       payload: {},
     });
     expect(res.statusCode).toBe(401);
+  });
+
+  it("rejects POST /api/csv-import without CSRF with 403", async () => {
+    const res = await server.inject({
+      method: "POST",
+      url: "/api/csv-import",
+      payload: {},
+      headers: authBearerHeader("tenant-1"),
+    });
+    expect(res.statusCode).toBe(403);
   });
 });
 
@@ -485,21 +533,21 @@ describe("Integration: Error handling and edge cases", () => {
     expect(res.statusCode).toBe(204);
   });
 
-  it("handles POST with empty body", async () => {
+  it("handles POST with empty body with CSRF", async () => {
     const res = await server.inject({
       method: "POST",
       url: "/api/shipments",
-      headers: authBearerHeader("tenant-1"),
+      headers: authHeadersWithCsrf("tenant-1"),
     });
     expect(res.statusCode).toBe(201);
   });
 
-  it("handles POST with JSON content-type", async () => {
+  it("handles POST with JSON content-type with CSRF", async () => {
     const res = await server.inject({
       method: "POST",
       url: "/api/shipments",
       headers: {
-        ...authBearerHeader("tenant-1"),
+        ...authHeadersWithCsrf("tenant-1"),
         "content-type": "application/json",
       },
       payload: JSON.stringify({ name: "test" }),

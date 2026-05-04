@@ -30,7 +30,7 @@ export function hasValidSession(): boolean {
 
 function buildHeaders(options: RequestInit): Record<string, string> {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    "content-type": "application/json",
   };
 
   if (authToken) {

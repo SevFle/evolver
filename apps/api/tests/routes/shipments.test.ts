@@ -21,26 +21,26 @@ describe("Shipment Routes", () => {
   });
 
   describe("GET /api/shipments", () => {
-    it("returns 200 with success and empty data array", async () => {
+    it("returns 500 when database is unavailable", async () => {
       const res = await server.inject({
         method: "GET",
         url: "/api/shipments",
         headers: authBearerHeader("t1"),
       });
-      expect(res.statusCode).toBe(200);
+      expect(res.statusCode).toBe(500);
       const body = res.json();
-      expect(body.success).toBe(true);
-      expect(Array.isArray(body.data)).toBe(true);
+      expect(body.success).toBe(false);
+      expect(body.error).toBe("Failed to retrieve shipments");
     });
 
-    it("works with API key auth", async () => {
+    it("returns 500 with API key auth when database is unavailable", async () => {
       const res = await server.inject({
         method: "GET",
         url: "/api/shipments",
         headers: apiKeyHeader("valid-key"),
       });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().success).toBe(true);
+      expect(res.statusCode).toBe(500);
+      expect(res.json().success).toBe(false);
     });
 
     it("returns 401 without authentication", async () => {

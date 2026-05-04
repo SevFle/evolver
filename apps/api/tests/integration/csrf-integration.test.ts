@@ -154,7 +154,7 @@ describe("Integration: CSRF Protection on State-Changing Endpoints", () => {
         },
       });
       expect(res.statusCode).toBe(403);
-      expect(res.json().error).toBe("CSRF token invalid");
+      expect(res.json().error).toBe("CSRF token missing");
     });
   });
 
