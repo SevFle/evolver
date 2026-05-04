@@ -36,11 +36,14 @@ describe("apiClient: edge cases", () => {
     });
 
     const client = await getApiClient();
-    await client.get("/test");
+    await client.get("/test", {
+      headers: { "X-Custom-Header": "custom-value" },
+    });
 
     const callArgs = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
       .calls[0];
-    expect(callArgs[1].headers["Content-Type"]).toBe("application/json");
+    expect(callArgs[1].headers["content-type"]).toBe("application/json");
+    expect(callArgs[1].headers["x-custom-header"]).toBe("custom-value");
   });
 
   it("PATCH with no body sends undefined", async () => {
