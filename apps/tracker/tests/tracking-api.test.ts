@@ -38,6 +38,11 @@ describe("getShipmentByTrackingId", () => {
         origin: "Shanghai",
         destination: "LA",
         status: "in_transit",
+        milestones: [],
+        branding: {
+          tenantName: "Acme Corp",
+          primaryColor: "#ff0000",
+        },
       },
     };
 
@@ -53,7 +58,7 @@ describe("getShipmentByTrackingId", () => {
 
     expect(result).toEqual(shipmentData.data);
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      expect.stringContaining("/api/shipments/SL-123"),
+      expect.stringContaining("/api/tracking-pages/SL-123"),
       expect.objectContaining({
         headers: expect.objectContaining({ "x-tenant-slug": "acme" }),
       })
@@ -139,10 +144,78 @@ describe("getShipmentByTrackingId", () => {
     await getShipmentByTrackingId("SL-1");
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      "http://custom-api:4000/api/shipments/SL-1",
+      "http://custom-api:4000/api/tracking-pages/SL-1",
       expect.anything()
     );
 
     delete process.env.API_INTERNAL_URL;
+  });
+
+  it("URL-encodes the tracking ID", async () => {
+    mockHeaders("acme.shiplens.io");
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({ success: true, data: { trackingId: "SL 123" } }),
+    });
+
+    const { getShipmentByTrackingId } = await import(
+      "../src/lib/tracking-api"
+    );
+    await getShipmentByTrackingId("SL 123");
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/tracking-pages/SL%20123"),
+      expect.anything()
+    );
+  });
+
+  it("returns full TrackingPageData with milestones and branding", async () => {
+    mockHeaders("acme.shiplens.io");
+
+    const fullData = {
+      success: true,
+      data: {
+        trackingId: "SL-FULL",
+        origin: "Shanghai, CN",
+        destination: "Los Angeles, US",
+        status: "in_transit",
+        carrier: "Maersk",
+        serviceType: "FCL",
+        estimatedDelivery: "2025-06-01T00:00:00Z",
+        reference: "PO-123",
+        milestones: [
+          {
+            type: "picked_up",
+            description: "Picked up",
+            location: "Shanghai",
+            occurredAt: "2025-01-15T10:00:00Z",
+          },
+        ],
+        branding: {
+          tenantName: "Acme Forwarding",
+          logoUrl: "https://example.com/logo.png",
+          primaryColor: "#3B82F6",
+          tagline: "Fast & Reliable",
+          contactEmail: "support@acme.com",
+          contactPhone: "+1-555-1234",
+        },
+      },
+    };
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(fullData),
+    });
+
+    const { getShipmentByTrackingId } = await import(
+      "../src/lib/tracking-api"
+    );
+    const result = await getShipmentByTrackingId("SL-FULL");
+
+    expect(result?.trackingId).toBe("SL-FULL");
+    expect(result?.milestones).toHaveLength(1);
+    expect(result?.branding?.tenantName).toBe("Acme Forwarding");
   });
 });

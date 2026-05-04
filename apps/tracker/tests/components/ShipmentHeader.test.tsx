@@ -1,8 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
 import { ShipmentHeader } from "../../src/components/ShipmentHeader";
+import type { TrackingPageData } from "../../src/lib/tracking-api";
 
-const baseShipment = {
+const baseShipment: TrackingPageData = {
   trackingId: "SL-ABC123",
   origin: "Shanghai",
   destination: "Los Angeles",
@@ -12,18 +13,24 @@ const baseShipment = {
 describe("ShipmentHeader", () => {
   it("renders origin and destination", () => {
     const { getByText } = render(<ShipmentHeader shipment={baseShipment} />);
-    expect(getByText(/Shanghai/)).toBeDefined();
-    expect(getByText(/Los Angeles/)).toBeDefined();
+    expect(getByText("Shanghai")).toBeDefined();
+    expect(getByText("Los Angeles")).toBeDefined();
   });
 
   it("renders tracking ID", () => {
     const { getByText } = render(<ShipmentHeader shipment={baseShipment} />);
-    expect(getByText(/SL-ABC123/)).toBeDefined();
+    expect(getByText("SL-ABC123")).toBeDefined();
+  });
+
+  it("renders origin and destination labels", () => {
+    const { getByText } = render(<ShipmentHeader shipment={baseShipment} />);
+    expect(getByText("Origin")).toBeDefined();
+    expect(getByText("Destination")).toBeDefined();
   });
 
   it("renders status with underscores replaced by spaces", () => {
     const { getByText } = render(<ShipmentHeader shipment={baseShipment} />);
-    expect(getByText(/in transit/i)).toBeDefined();
+    expect(getByText("IN TRANSIT")).toBeDefined();
   });
 
   it("renders status in uppercase", () => {
@@ -37,41 +44,120 @@ describe("ShipmentHeader", () => {
     const { getByText } = render(
       <ShipmentHeader shipment={{ ...baseShipment, carrier: "Maersk" }} />
     );
-    expect(getByText(/Maersk/)).toBeDefined();
+    expect(getByText("Maersk")).toBeDefined();
+  });
+
+  it("does not render carrier when null", () => {
+    const { queryByText } = render(
+      <ShipmentHeader shipment={{ ...baseShipment, carrier: null }} />
+    );
+    expect(queryByText(/Carrier/)).toBeNull();
   });
 
   it("does not render carrier when omitted", () => {
     const { container } = render(<ShipmentHeader shipment={baseShipment} />);
-    expect(container.textContent).not.toContain("Carrier:");
+    expect(container.textContent).not.toContain("Carrier");
   });
 
-  it("renders estimated delivery when provided", () => {
+  it("renders estimated delivery date when provided", () => {
     const { getByText } = render(
       <ShipmentHeader
-        shipment={{ ...baseShipment, estimatedDelivery: "2025-06-01" }}
+        shipment={{
+          ...baseShipment,
+          estimatedDelivery: "2025-06-01T00:00:00Z",
+        }}
       />
     );
-    expect(getByText(/2025-06-01/)).toBeDefined();
+    expect(getByText("Est. Delivery")).toBeDefined();
   });
 
-  it("renders exception status", () => {
+  it("renders actual delivery date instead of estimated when both present", () => {
+    const { getByText, queryByText } = render(
+      <ShipmentHeader
+        shipment={{
+          ...baseShipment,
+          estimatedDelivery: "2025-06-01T00:00:00Z",
+          actualDelivery: "2025-05-30T00:00:00Z",
+        }}
+      />
+    );
+    expect(getByText("Delivered")).toBeDefined();
+    expect(queryByText("Est. Delivery")).toBeNull();
+  });
+
+  it("renders service type when provided", () => {
     const { getByText } = render(
+      <ShipmentHeader
+        shipment={{ ...baseShipment, serviceType: "FCL" }}
+      />
+    );
+    expect(getByText("FCL")).toBeDefined();
+  });
+
+  it("renders reference when provided", () => {
+    const { getByText } = render(
+      <ShipmentHeader
+        shipment={{ ...baseShipment, reference: "PO-12345" }}
+      />
+    );
+    expect(getByText("PO-12345")).toBeDefined();
+  });
+
+  it("renders created date when provided", () => {
+    const { getByText } = render(
+      <ShipmentHeader
+        shipment={{ ...baseShipment, createdAt: "2025-01-15T10:00:00Z" }}
+      />
+    );
+    expect(getByText("Created")).toBeDefined();
+  });
+
+  it("renders exception status with correct class", () => {
+    const { container } = render(
       <ShipmentHeader shipment={{ ...baseShipment, status: "exception" }} />
     );
-    expect(getByText("EXCEPTION")).toBeDefined();
+    const badge = container.querySelector(".shipment-status-badge") as HTMLElement | null;
+    expect(badge?.classList.contains("status-exception")).toBe(true);
+    expect(badge?.textContent).toBe("EXCEPTION");
+  });
+
+  it("renders delivered status with delivered class", () => {
+    const { container } = render(
+      <ShipmentHeader shipment={{ ...baseShipment, status: "delivered" }} />
+    );
+    const badge = container.querySelector(".shipment-status-badge") as HTMLElement | null;
+    expect(badge?.classList.contains("status-delivered")).toBe(true);
   });
 
   it("renders customs_clearance status with space", () => {
     const { getByText } = render(
-      <ShipmentHeader shipment={{ ...baseShipment, status: "customs_clearance" }} />
+      <ShipmentHeader
+        shipment={{ ...baseShipment, status: "customs_clearance" }}
+      />
     );
     expect(getByText("CUSTOMS CLEARANCE")).toBeDefined();
   });
 
   it("renders out_for_delivery status with space", () => {
     const { getByText } = render(
-      <ShipmentHeader shipment={{ ...baseShipment, status: "out_for_delivery" }} />
+      <ShipmentHeader
+        shipment={{ ...baseShipment, status: "out_for_delivery" }}
+      />
     );
     expect(getByText("OUT FOR DELIVERY")).toBeDefined();
+  });
+
+  it("renders primary color on status badge", () => {
+    const { container } = render(
+      <ShipmentHeader shipment={baseShipment} primaryColor="#ff0000" />
+    );
+    const badge = container.querySelector(".shipment-status-badge") as HTMLElement | null;
+    expect(badge?.style.backgroundColor).toBe("rgb(255, 0, 0)");
+  });
+
+  it("renders route arrow SVG", () => {
+    const { container } = render(<ShipmentHeader shipment={baseShipment} />);
+    const svg = container.querySelector(".shipment-route-line svg");
+    expect(svg).not.toBeNull();
   });
 });

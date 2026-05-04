@@ -13,12 +13,13 @@ describe("BrandedShell", () => {
   });
 
   it("renders default tenant name ShipLens", () => {
-    const { getByText } = render(
+    const { container } = render(
       <BrandedShell>
         <span>child</span>
       </BrandedShell>
     );
-    expect(getByText("ShipLens")).toBeDefined();
+    const brandName = container.querySelector(".tracking-brand-name");
+    expect(brandName?.textContent).toBe("ShipLens");
   });
 
   it("renders custom tenant name", () => {
@@ -30,13 +31,15 @@ describe("BrandedShell", () => {
     expect(getByText("Acme Corp")).toBeDefined();
   });
 
-  it("renders footer text", () => {
-    const { getByText } = render(
+  it("renders footer powered by text", () => {
+    const { container } = render(
       <BrandedShell>
         <span>child</span>
       </BrandedShell>
     );
-    expect(getByText("Powered by ShipLens")).toBeDefined();
+    const footer = container.querySelector(".tracking-footer-powered");
+    expect(footer?.textContent).toContain("Powered by");
+    expect(footer?.textContent).toContain("ShipLens");
   });
 
   it("renders with empty children", () => {
@@ -62,5 +65,103 @@ describe("BrandedShell", () => {
     );
     const footer = container.querySelector("footer");
     expect(footer).not.toBeNull();
+  });
+
+  it("renders logo image when logoUrl provided", () => {
+    const { container } = render(
+      <BrandedShell logoUrl="https://example.com/logo.png">
+        <span>child</span>
+      </BrandedShell>
+    );
+    const img = container.querySelector("img");
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute("src")).toBe("https://example.com/logo.png");
+  });
+
+  it("renders tenant name as text when no logoUrl", () => {
+    const { getByText, container } = render(
+      <BrandedShell tenantName="TestCo">
+        <span>child</span>
+      </BrandedShell>
+    );
+    expect(getByText("TestCo")).toBeDefined();
+    expect(container.querySelector("img")).toBeNull();
+  });
+
+  it("renders tagline when provided", () => {
+    const { getByText } = render(
+      <BrandedShell tagline="Your trusted partner">
+        <span>child</span>
+      </BrandedShell>
+    );
+    expect(getByText("Your trusted partner")).toBeDefined();
+  });
+
+  it("does not render tagline when not provided", () => {
+    const { container } = render(
+      <BrandedShell>
+        <span>child</span>
+      </BrandedShell>
+    );
+    expect(container.querySelector(".tracking-tagline")).toBeNull();
+  });
+
+  it("renders contact email as mailto link", () => {
+    const { getByText } = render(
+      <BrandedShell contactEmail="support@test.com">
+        <span>child</span>
+      </BrandedShell>
+    );
+    const link = getByText("support@test.com");
+    expect(link.getAttribute("href")).toBe("mailto:support@test.com");
+  });
+
+  it("renders contact phone as tel link", () => {
+    const { getByText } = render(
+      <BrandedShell contactPhone="+1-555-1234">
+        <span>child</span>
+      </BrandedShell>
+    );
+    const link = getByText("+1-555-1234");
+    expect(link.getAttribute("href")).toBe("tel:+1-555-1234");
+  });
+
+  it("renders support link when provided", () => {
+    const { getByText } = render(
+      <BrandedShell supportUrl="https://help.test.com">
+        <span>child</span>
+      </BrandedShell>
+    );
+    const link = getByText("Support");
+    expect(link.getAttribute("href")).toBe("https://help.test.com");
+  });
+
+  it("renders custom footer text", () => {
+    const { getByText } = render(
+      <BrandedShell customFooterText="Copyright 2025 TestCo">
+        <span>child</span>
+      </BrandedShell>
+    );
+    expect(getByText("Copyright 2025 TestCo")).toBeDefined();
+  });
+
+  it("applies primary color to header border", () => {
+    const { container } = render(
+      <BrandedShell primaryColor="#ff0000">
+        <span>child</span>
+      </BrandedShell>
+    );
+    const header = container.querySelector("header") as HTMLElement | null;
+    expect(header?.style.borderColor).toBe("rgb(255, 0, 0)");
+  });
+
+  it("applies primary color to brand name text", () => {
+    const { container } = render(
+      <BrandedShell primaryColor="#ff0000">
+        <span>child</span>
+      </BrandedShell>
+    );
+    const name = container.querySelector(".tracking-brand-name") as HTMLElement | null;
+    expect(name?.style.color).toBe("rgb(255, 0, 0)");
   });
 });
