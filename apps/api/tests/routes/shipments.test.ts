@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import Fastify from "fastify";
 import { buildServer } from "../../src/server";
+import { shipmentRoutes } from "../../src/routes/shipments";
 import { authBearerHeader, apiKeyHeader, DEFAULT_SECRET, createCsrfToken } from "../helpers/auth";
 import { hashApiKey } from "../../src/plugins/auth";
 
@@ -132,6 +134,21 @@ describe("Shipment Routes", () => {
         url: "/api/shipments/SL-123",
       });
       expect(res.statusCode).toBe(401);
+    });
+  });
+
+  describe("tenantId guard in route handler", () => {
+    it("returns 401 when tenantId is not set on request", async () => {
+      const bareServer = Fastify();
+      await bareServer.register(shipmentRoutes, { prefix: "/api/shipments" });
+      const res = await bareServer.inject({
+        method: "GET",
+        url: "/api/shipments",
+      });
+      expect(res.statusCode).toBe(401);
+      expect(res.json().success).toBe(false);
+      expect(res.json().error).toBe("Authentication required");
+      await bareServer.close();
     });
   });
 });

@@ -301,3 +301,52 @@ describe("generateCsrfSecret utility", () => {
     expect(secrets.size).toBe(10);
   });
 });
+
+describe("CSRF plugin fallback secret generation", () => {
+  let fallbackServer: Awaited<ReturnType<typeof Fastify>>;
+  let origCsrfSecret: string | undefined;
+  let origJwtSecret: string | undefined;
+
+  beforeEach(async () => {
+    origCsrfSecret = process.env.CSRF_SECRET;
+    origJwtSecret = process.env.JWT_SECRET;
+    delete process.env.CSRF_SECRET;
+    delete process.env.JWT_SECRET;
+    fallbackServer = Fastify();
+    await fallbackServer.register(csrfPlugin);
+    fallbackServer.post("/test", async () => ({ ok: true }));
+  });
+
+  afterEach(async () => {
+    await fallbackServer.close();
+    if (origCsrfSecret !== undefined) process.env.CSRF_SECRET = origCsrfSecret;
+    else delete process.env.CSRF_SECRET;
+    if (origJwtSecret !== undefined) process.env.JWT_SECRET = origJwtSecret;
+    else delete process.env.JWT_SECRET;
+  });
+
+  it("generates a secret when CSRF_SECRET and JWT_SECRET are not set", () => {
+    const token = fallbackServer.generateCsrfToken();
+    expect(token).toBeTruthy();
+    expect(token.startsWith("csrf_")).toBe(true);
+  });
+
+  it("accepts server-generated token without env secrets", async () => {
+    const token = fallbackServer.generateCsrfToken();
+    const res = await fallbackServer.inject({
+      method: "POST",
+      url: "/test",
+      headers: { "x-csrf-token": token },
+    });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("rejects requests without token when using generated secret", async () => {
+    const res = await fallbackServer.inject({
+      method: "POST",
+      url: "/test",
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error).toBe("CSRF token missing");
+  });
+});
