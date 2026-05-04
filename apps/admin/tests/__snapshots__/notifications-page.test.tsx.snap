@@ -3,18 +3,448 @@
 exports[`NotificationsPage > snapshot matches 1`] = `
 <div>
   <div
-    style="padding: 2rem; max-width: 640px; margin: 0px auto;"
+    style="padding: 2rem; max-width: 800px; margin: 0px auto;"
   >
     <h1
       style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem;"
     >
-      Notification Rules
+      Notification Preferences
     </h1>
     <p
-      style="color: var(--color-muted);"
+      style="color: var(--color-muted); margin-bottom: 1.5rem;"
     >
-      Notification rule management coming soon.
+      Configure which shipment milestones trigger notifications and how they are delivered.
     </p>
+    <div
+      style="display: flex; flex-direction: column; gap: 1rem;"
+    >
+      <div
+        style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 0.5rem; padding: 1rem;"
+      >
+        <div
+          style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;"
+        >
+          <span
+            style="font-weight: 500; font-size: 0.9375rem;"
+          >
+            Created
+          </span>
+          <label
+            style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;"
+          >
+            <input
+              checked=""
+              data-testid="toggle-created"
+              style="width: 1rem; height: 1rem; cursor: pointer;"
+              type="checkbox"
+            />
+            <span
+              style="font-size: 0.875rem; color: var(--color-muted);"
+            >
+              Enabled
+            </span>
+          </label>
+        </div>
+        <div
+          style="margin-bottom: 0.75rem;"
+        >
+          <span
+            style="font-size: 0.8125rem; color: var(--color-muted); margin-right: 0.5rem;"
+          >
+            Channel:
+          </span>
+          <select
+            data-testid="channel-created"
+            style="padding: 0.25rem 0.5rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 0.25rem; background-color: var(--color-surface);"
+          >
+            <option
+              value="email"
+            >
+              Email
+            </option>
+            <option
+              value="sms"
+            >
+              SMS
+            </option>
+            <option
+              value="both"
+            >
+              Both
+            </option>
+          </select>
+        </div>
+        <div>
+          <span
+            style="font-size: 0.8125rem; color: var(--color-muted); display: block; margin-bottom: 0.25rem;"
+          >
+            Custom Template:
+          </span>
+          <textarea
+            data-testid="template-created"
+            placeholder="Leave empty to use default message"
+            rows="2"
+            style="width: 100%; padding: 0.5rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 0.25rem; resize: vertical; background-color: var(--color-surface);"
+          />
+        </div>
+      </div>
+      <div
+        style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 0.5rem; padding: 1rem;"
+      >
+        <div
+          style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;"
+        >
+          <span
+            style="font-weight: 500; font-size: 0.9375rem;"
+          >
+            Picked Up
+          </span>
+          <label
+            style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;"
+          >
+            <input
+              checked=""
+              data-testid="toggle-picked_up"
+              style="width: 1rem; height: 1rem; cursor: pointer;"
+              type="checkbox"
+            />
+            <span
+              style="font-size: 0.875rem; color: var(--color-muted);"
+            >
+              Enabled
+            </span>
+          </label>
+        </div>
+        <div
+          style="margin-bottom: 0.75rem;"
+        >
+          <span
+            style="font-size: 0.8125rem; color: var(--color-muted); margin-right: 0.5rem;"
+          >
+            Channel:
+          </span>
+          <select
+            data-testid="channel-picked_up"
+            style="padding: 0.25rem 0.5rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 0.25rem; background-color: var(--color-surface);"
+          >
+            <option
+              value="email"
+            >
+              Email
+            </option>
+            <option
+              value="sms"
+            >
+              SMS
+            </option>
+            <option
+              value="both"
+            >
+              Both
+            </option>
+          </select>
+        </div>
+        <div>
+          <span
+            style="font-size: 0.8125rem; color: var(--color-muted); display: block; margin-bottom: 0.25rem;"
+          >
+            Custom Template:
+          </span>
+          <textarea
+            data-testid="template-picked_up"
+            placeholder="Leave empty to use default message"
+            rows="2"
+            style="width: 100%; padding: 0.5rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 0.25rem; resize: vertical; background-color: var(--color-surface);"
+          />
+        </div>
+      </div>
+      <div
+        style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 0.5rem; padding: 1rem;"
+      >
+        <div
+          style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;"
+        >
+          <span
+            style="font-weight: 500; font-size: 0.9375rem;"
+          >
+            In Transit
+          </span>
+          <label
+            style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;"
+          >
+            <input
+              checked=""
+              data-testid="toggle-in_transit"
+              style="width: 1rem; height: 1rem; cursor: pointer;"
+              type="checkbox"
+            />
+            <span
+              style="font-size: 0.875rem; color: var(--color-muted);"
+            >
+              Enabled
+            </span>
+          </label>
+        </div>
+        <div
+          style="margin-bottom: 0.75rem;"
+        >
+          <span
+            style="font-size: 0.8125rem; color: var(--color-muted); margin-right: 0.5rem;"
+          >
+            Channel:
+          </span>
+          <select
+            data-testid="channel-in_transit"
+            style="padding: 0.25rem 0.5rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 0.25rem; background-color: var(--color-surface);"
+          >
+            <option
+              value="email"
+            >
+              Email
+            </option>
+            <option
+              value="sms"
+            >
+              SMS
+            </option>
+            <option
+              value="both"
+            >
+              Both
+            </option>
+          </select>
+        </div>
+        <div>
+          <span
+            style="font-size: 0.8125rem; color: var(--color-muted); display: block; margin-bottom: 0.25rem;"
+          >
+            Custom Template:
+          </span>
+          <textarea
+            data-testid="template-in_transit"
+            placeholder="Leave empty to use default message"
+            rows="2"
+            style="width: 100%; padding: 0.5rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 0.25rem; resize: vertical; background-color: var(--color-surface);"
+          />
+        </div>
+      </div>
+      <div
+        style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 0.5rem; padding: 1rem;"
+      >
+        <div
+          style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;"
+        >
+          <span
+            style="font-weight: 500; font-size: 0.9375rem;"
+          >
+            Out for Delivery
+          </span>
+          <label
+            style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;"
+          >
+            <input
+              checked=""
+              data-testid="toggle-out_for_delivery"
+              style="width: 1rem; height: 1rem; cursor: pointer;"
+              type="checkbox"
+            />
+            <span
+              style="font-size: 0.875rem; color: var(--color-muted);"
+            >
+              Enabled
+            </span>
+          </label>
+        </div>
+        <div
+          style="margin-bottom: 0.75rem;"
+        >
+          <span
+            style="font-size: 0.8125rem; color: var(--color-muted); margin-right: 0.5rem;"
+          >
+            Channel:
+          </span>
+          <select
+            data-testid="channel-out_for_delivery"
+            style="padding: 0.25rem 0.5rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 0.25rem; background-color: var(--color-surface);"
+          >
+            <option
+              value="email"
+            >
+              Email
+            </option>
+            <option
+              value="sms"
+            >
+              SMS
+            </option>
+            <option
+              value="both"
+            >
+              Both
+            </option>
+          </select>
+        </div>
+        <div>
+          <span
+            style="font-size: 0.8125rem; color: var(--color-muted); display: block; margin-bottom: 0.25rem;"
+          >
+            Custom Template:
+          </span>
+          <textarea
+            data-testid="template-out_for_delivery"
+            placeholder="Leave empty to use default message"
+            rows="2"
+            style="width: 100%; padding: 0.5rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 0.25rem; resize: vertical; background-color: var(--color-surface);"
+          />
+        </div>
+      </div>
+      <div
+        style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 0.5rem; padding: 1rem;"
+      >
+        <div
+          style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;"
+        >
+          <span
+            style="font-weight: 500; font-size: 0.9375rem;"
+          >
+            Delivered
+          </span>
+          <label
+            style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;"
+          >
+            <input
+              checked=""
+              data-testid="toggle-delivered"
+              style="width: 1rem; height: 1rem; cursor: pointer;"
+              type="checkbox"
+            />
+            <span
+              style="font-size: 0.875rem; color: var(--color-muted);"
+            >
+              Enabled
+            </span>
+          </label>
+        </div>
+        <div
+          style="margin-bottom: 0.75rem;"
+        >
+          <span
+            style="font-size: 0.8125rem; color: var(--color-muted); margin-right: 0.5rem;"
+          >
+            Channel:
+          </span>
+          <select
+            data-testid="channel-delivered"
+            style="padding: 0.25rem 0.5rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 0.25rem; background-color: var(--color-surface);"
+          >
+            <option
+              value="email"
+            >
+              Email
+            </option>
+            <option
+              value="sms"
+            >
+              SMS
+            </option>
+            <option
+              value="both"
+            >
+              Both
+            </option>
+          </select>
+        </div>
+        <div>
+          <span
+            style="font-size: 0.8125rem; color: var(--color-muted); display: block; margin-bottom: 0.25rem;"
+          >
+            Custom Template:
+          </span>
+          <textarea
+            data-testid="template-delivered"
+            placeholder="Leave empty to use default message"
+            rows="2"
+            style="width: 100%; padding: 0.5rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 0.25rem; resize: vertical; background-color: var(--color-surface);"
+          />
+        </div>
+      </div>
+      <div
+        style="background-color: var(--color-surface); border: 1px solid var(--color-border); border-radius: 0.5rem; padding: 1rem;"
+      >
+        <div
+          style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;"
+        >
+          <span
+            style="font-weight: 500; font-size: 0.9375rem;"
+          >
+            Exception
+          </span>
+          <label
+            style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;"
+          >
+            <input
+              checked=""
+              data-testid="toggle-exception"
+              style="width: 1rem; height: 1rem; cursor: pointer;"
+              type="checkbox"
+            />
+            <span
+              style="font-size: 0.875rem; color: var(--color-muted);"
+            >
+              Enabled
+            </span>
+          </label>
+        </div>
+        <div
+          style="margin-bottom: 0.75rem;"
+        >
+          <span
+            style="font-size: 0.8125rem; color: var(--color-muted); margin-right: 0.5rem;"
+          >
+            Channel:
+          </span>
+          <select
+            data-testid="channel-exception"
+            style="padding: 0.25rem 0.5rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 0.25rem; background-color: var(--color-surface);"
+          >
+            <option
+              value="email"
+            >
+              Email
+            </option>
+            <option
+              value="sms"
+            >
+              SMS
+            </option>
+            <option
+              value="both"
+            >
+              Both
+            </option>
+          </select>
+        </div>
+        <div>
+          <span
+            style="font-size: 0.8125rem; color: var(--color-muted); display: block; margin-bottom: 0.25rem;"
+          >
+            Custom Template:
+          </span>
+          <textarea
+            data-testid="template-exception"
+            placeholder="Leave empty to use default message"
+            rows="2"
+            style="width: 100%; padding: 0.5rem; font-size: 0.8125rem; border: 1px solid var(--color-border); border-radius: 0.25rem; resize: vertical; background-color: var(--color-surface);"
+          />
+        </div>
+      </div>
+    </div>
+    <button
+      data-testid="save-button"
+      style="margin-top: 1.5rem; padding: 0.625rem 1.5rem; font-size: 0.875rem; font-weight: 500; color: rgb(255, 255, 255); background-color: var(--color-primary); border: medium; border-radius: 0.375rem; cursor: pointer;"
+    >
+      Save Preferences
+    </button>
   </div>
 </div>
 `;
