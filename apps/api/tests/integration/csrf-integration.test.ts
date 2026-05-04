@@ -250,4 +250,61 @@ describe("Integration: CSRF Protection on State-Changing Endpoints", () => {
       expect(res.statusCode).toBe(403);
     });
   });
+
+  describe("CSRF header case-insensitivity", () => {
+    it("POST with no x-csrf-token returns 403 'CSRF token missing'", async () => {
+      const res = await server.inject({
+        method: "POST",
+        url: "/api/shipments",
+        payload: {},
+        headers: authBearerHeader("tenant-1"),
+      });
+      expect(res.statusCode).toBe(403);
+      expect(res.json().error).toBe("CSRF token missing");
+      expect(res.json().success).toBe(false);
+    });
+
+    it("POST with invalid x-csrf-token returns 403 'CSRF token invalid'", async () => {
+      const res = await server.inject({
+        method: "POST",
+        url: "/api/shipments",
+        payload: {},
+        headers: {
+          ...authBearerHeader("tenant-1"),
+          "x-csrf-token": "totally-invalid-garbage-token-!@#$",
+        },
+      });
+      expect(res.statusCode).toBe(403);
+      expect(res.json().error).toBe("CSRF token invalid");
+      expect(res.json().success).toBe(false);
+    });
+
+    it("POST with mixed-case Content-Type and no CSRF returns 403", async () => {
+      const res = await server.inject({
+        method: "POST",
+        url: "/api/shipments",
+        payload: {},
+        headers: {
+          ...authBearerHeader("tenant-1"),
+          "Content-Type": "Application/JSON",
+        },
+      });
+      expect(res.statusCode).toBe(403);
+      expect(res.json().error).toBe("CSRF token missing");
+    });
+
+    it("accepts valid token with mixed-case X-Csrf-Token header name", async () => {
+      const token = createCsrfToken(csrfSecret);
+      const res = await server.inject({
+        method: "POST",
+        url: "/api/shipments",
+        payload: {},
+        headers: {
+          ...authBearerHeader("tenant-1"),
+          "X-Csrf-Token": token,
+        },
+      });
+      expect(res.statusCode).toBe(201);
+    });
+  });
 });
