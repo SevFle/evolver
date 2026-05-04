@@ -1,20 +1,49 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`ApiKeysPage > snapshot matches 1`] = `
+exports[`ApiKeysPage (via SettingsPage) > snapshot matches 1`] = `
 <div>
   <div
-    style="padding: 2rem; max-width: 640px; margin: 0px auto;"
+    style="padding: 2rem; max-width: 800px; margin: 0px auto;"
   >
     <h1
       style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem;"
     >
-      API Keys
+      Tenant Settings
     </h1>
-    <p
-      style="color: var(--color-muted);"
+    <div
+      style="display: flex; gap: 0.25rem; border-bottom: 1px solid var(--color-border); margin-bottom: 1.5rem;"
     >
-      API key management coming soon.
-    </p>
+      <button
+        aria-selected="false"
+        role="tab"
+        style="padding: 0.5rem 1rem; font-size: 0.8125rem; font-weight: 400; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; background: none; color: var(--color-muted); cursor: pointer;"
+      >
+        Branding
+      </button>
+      <button
+        aria-selected="false"
+        role="tab"
+        style="padding: 0.5rem 1rem; font-size: 0.8125rem; font-weight: 400; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; background: none; color: var(--color-muted); cursor: pointer;"
+      >
+        Notifications
+      </button>
+      <button
+        aria-selected="true"
+        role="tab"
+        style="padding: 0.5rem 1rem; font-size: 0.8125rem; font-weight: 600; border-top: medium; border-right: medium; border-bottom: 2px solid var(--color-primary); border-left: medium; border-image: none; background: none; color: var(--color-primary); cursor: pointer;"
+      >
+        API Keys
+      </button>
+    </div>
+    <div
+      role="tabpanel"
+    >
+      <div
+        style="color: var(--color-muted); padding: 1rem;"
+      >
+        Loading API keys...
+      </div>
+    </div>
   </div>
 </div>
 `;
