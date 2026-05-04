@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 import { ShipmentsPage } from "../src/components/ShipmentsPage";
 
 vi.mock("../src/lib/api-client", () => ({
@@ -72,6 +72,51 @@ describe("ShipmentsPage", () => {
   it("shows loading state initially", () => {
     render(<ShipmentsPage />);
     expect(screen.getByText("Loading shipments...")).toBeDefined();
+  });
+
+  it("shows empty state when data loads with no shipments", async () => {
+    render(<ShipmentsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("No shipments found.")).toBeDefined();
+    });
+  });
+
+  it("shows shipment rows when data loads successfully", async () => {
+    const { apiClient } = await import("../src/lib/api-client");
+    vi.mocked(apiClient.get).mockResolvedValueOnce({
+      data: [
+        {
+          id: "1",
+          trackingId: "SL-123",
+          customerName: "Acme Corp",
+          origin: "Shanghai",
+          destination: "Los Angeles",
+          carrier: "Maersk",
+          status: "in_transit",
+          estimatedDelivery: "2026-06-01",
+        },
+      ],
+      success: true,
+    });
+
+    render(<ShipmentsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("SL-123")).toBeDefined();
+    });
+    expect(screen.getByText("Acme Corp")).toBeDefined();
+    expect(screen.getByText("Shanghai")).toBeDefined();
+    expect(screen.getByText("Los Angeles")).toBeDefined();
+    expect(screen.getByText("Maersk")).toBeDefined();
+  });
+
+  it("shows error message when API request fails", async () => {
+    const { apiClient } = await import("../src/lib/api-client");
+    vi.mocked(apiClient.get).mockRejectedValueOnce(new Error("Network error"));
+
+    render(<ShipmentsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Network error")).toBeDefined();
+    });
   });
 
   it("snapshot matches", () => {

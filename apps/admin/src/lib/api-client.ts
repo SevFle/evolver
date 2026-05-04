@@ -28,7 +28,7 @@ export function hasValidSession(): boolean {
   return authToken !== null;
 }
 
-function buildHeaders(options: RequestInit): Record<string, string> {
+function buildHeaders(options: Pick<RequestInit, "headers">): Record<string, string> {
   const headers: Record<string, string> = {
     "content-type": "application/json",
   };

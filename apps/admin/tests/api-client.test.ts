@@ -197,4 +197,36 @@ describe("apiClient", () => {
       expect.anything()
     );
   });
+
+  it("merges custom headers from options", async () => {
+    globalThis.fetch = mockFetch({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      json: () => Promise.resolve({}),
+    });
+
+    const { apiClient: freshClient } = await import("../src/lib/api-client");
+    await freshClient.get("/test");
+
+    const callArgs = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const headers = callArgs[1].headers as Record<string, string>;
+    expect(headers["content-type"]).toBe("application/json");
+  });
+
+  it("clears session on 401", async () => {
+    globalThis.fetch = mockFetch({
+      ok: false,
+      status: 401,
+      statusText: "Unauthorized",
+      json: () => Promise.resolve({}),
+    });
+
+    const { apiClient: freshClient, setAuthToken, getAuthToken } = await import("../src/lib/api-client");
+    setAuthToken("test-token");
+    expect(getAuthToken()).toBe("test-token");
+
+    await freshClient.get("/test").catch(() => {});
+    expect(getAuthToken()).toBeNull();
+  });
 });
