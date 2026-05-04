@@ -1,12 +1,100 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { buildServer } from "../../src/server";
 import {
   authBearerHeader,
   apiKeyHeader,
   DEFAULT_SECRET,
   authHeadersWithCsrf,
+  createCsrfToken,
 } from "../helpers/auth";
 import { hashApiKey } from "../../src/plugins/auth";
+
+const { mockDbState } = vi.hoisted(() => {
+  let callIndex = 0;
+  let results: any[][] = [[{ count: "0" }], []];
+  return {
+    mockDbState: {
+      setResults(r: any[][]) {
+        results = r;
+        callIndex = 0;
+      },
+      reset() {
+        results = [[{ count: "0" }], []];
+        callIndex = 0;
+      },
+      getNext() {
+        return results[callIndex++] || [];
+      },
+    },
+  };
+});
+
+vi.mock("@shiplens/db", () => ({
+  db: {
+    select: vi.fn(() => {
+      const value = mockDbState.getNext();
+      const chain: any = {
+        then(onFulfilled: any) {
+          onFulfilled(value);
+        },
+        catch() {},
+      };
+      chain.from = chain.where = chain.orderBy = chain.limit = chain.offset =
+        vi.fn().mockReturnValue(chain);
+      return chain;
+    }),
+  },
+  shipments: {
+    id: "id",
+    tenantId: "tenantId",
+    trackingId: "trackingId",
+    reference: "reference",
+    origin: "origin",
+    destination: "destination",
+    carrier: "carrier",
+    serviceType: "serviceType",
+    status: "status",
+    customerName: "customerName",
+    customerEmail: "customerEmail",
+    estimatedDelivery: "estimatedDelivery",
+    actualDelivery: "actualDelivery",
+    createdAt: "createdAt",
+    updatedAt: "updatedAt",
+  },
+  milestones: {
+    id: "id",
+    shipmentId: "shipmentId",
+    type: "type",
+    description: "description",
+    location: "location",
+    occurredAt: "occurredAt",
+  },
+  shipmentStatusEnum: {
+    enumValues: [
+      "pending",
+      "booked",
+      "in_transit",
+      "at_port",
+      "customs_clearance",
+      "out_for_delivery",
+      "delivered",
+      "exception",
+    ],
+  },
+}));
+
+vi.mock("drizzle-orm", () => ({
+  eq: vi.fn(() => ({})),
+  and: vi.fn(() => ({})),
+  or: vi.fn(() => ({})),
+  like: vi.fn(() => ({})),
+  inArray: vi.fn(() => ({})),
+  gte: vi.fn(() => ({})),
+  lte: vi.fn(() => ({})),
+  desc: vi.fn(() => ({})),
+  asc: vi.fn(() => ({})),
+  sql: vi.fn((strings: any, ...values: any[]) => ({})),
+}));
 
 const mockResolver = async (keyHash: string) => {
   if (keyHash === hashApiKey("valid-test-key")) return "tenant-int";
@@ -113,6 +201,22 @@ describe("Integration: Shipment Routes", () => {
       url: "/api/shipments",
     });
     expect(res.statusCode).toBe(401);
+  });
+
+  it("GET /api/shipments returns 200 with shipments list", async () => {
+    mockDbState.reset();
+    const res = await server.inject({
+      method: "GET",
+      url: "/api/shipments",
+      headers: authBearerHeader("tenant-1"),
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.success).toBe(true);
+    expect(body.data).toEqual([]);
+    expect(body.total).toBe(0);
+    expect(body.page).toBe(1);
+    expect(body.pageSize).toBe(25);
   });
 
   it("rejects unauthenticated POST /api/shipments with 401", async () => {
