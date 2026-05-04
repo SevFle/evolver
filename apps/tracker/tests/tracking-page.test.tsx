@@ -159,4 +159,34 @@ describe("TrackingPage", () => {
 
     expect(metadata.title).toBe("Tracking AB-9999 — ShipLens");
   });
+
+  it("handles data with null milestones by passing empty array to MilestoneTimeline", async () => {
+    (getShipmentByTrackingId as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...mockShipmentData,
+      milestones: null,
+    });
+
+    const { getByText } = render(
+      await TrackingPage({
+        params: Promise.resolve({ trackingId: "SL-1234" }),
+      })
+    );
+
+    expect(getByText("No milestone updates yet. Check back soon.")).toBeDefined();
+  });
+
+  it("handles data with undefined milestones", async () => {
+    (getShipmentByTrackingId as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...mockShipmentData,
+      milestones: undefined,
+    });
+
+    const { getByText } = render(
+      await TrackingPage({
+        params: Promise.resolve({ trackingId: "SL-1234" }),
+      })
+    );
+
+    expect(getByText("No milestone updates yet. Check back soon.")).toBeDefined();
+  });
 });

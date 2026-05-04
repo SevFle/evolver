@@ -197,4 +197,100 @@ describe("MilestoneTimeline", () => {
     const lastItem = items[items.length - 1];
     expect(lastItem.querySelector(".milestone-line")).toBeNull();
   });
+
+  it("falls back to raw date string when toLocaleDateString throws", () => {
+    const original = Date.prototype.toLocaleDateString;
+    Date.prototype.toLocaleDateString = () => {
+      throw new RangeError("Invalid date");
+    };
+
+    try {
+      const { container } = render(
+        <MilestoneTimeline
+          milestones={[
+            {
+              type: "picked_up",
+              description: "Bad date",
+              occurredAt: "not-a-valid-date",
+            },
+          ]}
+        />
+      );
+      const timeSpan = container.querySelector(".milestone-time");
+      expect(timeSpan?.textContent).toContain("not-a-valid-date");
+    } finally {
+      Date.prototype.toLocaleDateString = original;
+    }
+  });
+
+  it("renders date without time when toLocaleTimeString throws", () => {
+    const original = Date.prototype.toLocaleTimeString;
+    Date.prototype.toLocaleTimeString = () => {
+      throw new RangeError("Invalid time");
+    };
+
+    try {
+      const { container } = render(
+        <MilestoneTimeline
+          milestones={[
+            {
+              type: "picked_up",
+              description: "Bad time",
+              occurredAt: "2025-01-15T10:00:00Z",
+            },
+          ]}
+        />
+      );
+      const timeSpan = container.querySelector(".milestone-time");
+      expect(timeSpan).not.toBeNull();
+      expect(timeSpan?.textContent).not.toContain("·");
+    } finally {
+      Date.prototype.toLocaleTimeString = original;
+    }
+  });
+
+  it("applies completed dot class on delivered milestones", () => {
+    const { container } = render(
+      <MilestoneTimeline
+        milestones={[
+          {
+            type: "in_transit",
+            description: "In transit",
+            occurredAt: "2025-01-16T08:00:00Z",
+          },
+          {
+            type: "delivered",
+            description: "Delivered",
+            occurredAt: "2025-01-25T14:00:00Z",
+          },
+        ]}
+      />
+    );
+    const dots = container.querySelectorAll(".milestone-dot");
+    expect(dots[1].classList.contains("milestone-dot-completed")).toBe(true);
+  });
+
+  it("applies primary color to completed dot", () => {
+    const { container } = render(
+      <MilestoneTimeline
+        milestones={[
+          {
+            type: "in_transit",
+            description: "In transit",
+            occurredAt: "2025-01-16T08:00:00Z",
+          },
+          {
+            type: "delivered",
+            description: "Delivered",
+            occurredAt: "2025-01-25T14:00:00Z",
+          },
+        ]}
+        primaryColor="#00ff00"
+      />
+    );
+    const completedDot = container.querySelector(
+      ".milestone-dot-completed"
+    ) as HTMLElement | null;
+    expect(completedDot?.style.backgroundColor).toBe("rgb(0, 255, 0)");
+  });
 });

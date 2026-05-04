@@ -160,4 +160,54 @@ describe("ShipmentHeader", () => {
     const svg = container.querySelector(".shipment-route-line svg");
     expect(svg).not.toBeNull();
   });
+
+  it("falls back to raw date string when toLocaleDateString throws", () => {
+    const original = Date.prototype.toLocaleDateString;
+    Date.prototype.toLocaleDateString = () => {
+      throw new RangeError("Invalid date");
+    };
+
+    try {
+      const { getByText } = render(
+        <ShipmentHeader
+          shipment={{
+            ...baseShipment,
+            estimatedDelivery: "bad-date-string",
+          }}
+        />
+      );
+      expect(getByText("bad-date-string")).toBeDefined();
+    } finally {
+      Date.prototype.toLocaleDateString = original;
+    }
+  });
+
+  it("renders default status class for unknown status", () => {
+    const { container } = render(
+      <ShipmentHeader shipment={{ ...baseShipment, status: "pending" }} />
+    );
+    const badge = container.querySelector(
+      ".shipment-status-badge"
+    ) as HTMLElement | null;
+    expect(badge?.classList.contains("status-default")).toBe(true);
+    expect(badge?.textContent).toBe("PENDING");
+  });
+
+  it("renders at_port status with active class", () => {
+    const { container } = render(
+      <ShipmentHeader shipment={{ ...baseShipment, status: "at_port" }} />
+    );
+    const badge = container.querySelector(
+      ".shipment-status-badge"
+    ) as HTMLElement | null;
+    expect(badge?.classList.contains("status-active")).toBe(true);
+  });
+
+  it("does not render estimated delivery when no date provided", () => {
+    const { queryByText } = render(
+      <ShipmentHeader shipment={baseShipment} />
+    );
+    expect(queryByText("Est. Delivery")).toBeNull();
+    expect(queryByText("Delivered")).toBeNull();
+  });
 });
