@@ -115,6 +115,34 @@ export const notificationRules = pgTable("notification_rules", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const notifPrefMilestoneEnum = pgEnum("notif_pref_milestone", [
+  "created",
+  "picked_up",
+  "in_transit",
+  "out_for_delivery",
+  "delivered",
+  "exception",
+]);
+
+export const notifPrefChannelEnum = pgEnum("notif_pref_channel", [
+  "email",
+  "sms",
+  "both",
+]);
+
+export const notificationPreferences = pgTable("notification_preferences", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tenantId: uuid("tenant_id")
+    .references(() => tenants.id, { onDelete: "cascade" })
+    .notNull(),
+  milestoneType: notifPrefMilestoneEnum("milestone_type").notNull(),
+  channel: notifPrefChannelEnum("channel").default("email").notNull(),
+  enabled: boolean("enabled").default(true).notNull(),
+  customTemplate: text("custom_template"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const notifications = pgTable("notifications", {
   id: uuid("id").defaultRandom().primaryKey(),
   shipmentId: uuid("shipment_id")
@@ -132,6 +160,7 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   shipments: many(shipments),
   apiKeys: many(apiKeys),
   notificationRules: many(notificationRules),
+  notificationPreferences: many(notificationPreferences),
 }));
 
 export const shipmentsRelations = relations(shipments, ({ one, many }) => ({
@@ -160,6 +189,13 @@ export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
 export const notificationRulesRelations = relations(notificationRules, ({ one }) => ({
   tenant: one(tenants, {
     fields: [notificationRules.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const notificationPreferencesRelations = relations(notificationPreferences, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [notificationPreferences.tenantId],
     references: [tenants.id],
   }),
 }));

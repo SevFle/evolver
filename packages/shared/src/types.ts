@@ -134,3 +134,46 @@ export const SORTABLE_COLUMNS = [
 ] as const;
 
 export type SortableColumn = (typeof SORTABLE_COLUMNS)[number];
+
+export type NotificationPrefMilestone =
+  | "created"
+  | "picked_up"
+  | "in_transit"
+  | "out_for_delivery"
+  | "delivered"
+  | "exception";
+
+export type NotificationPrefChannel = "email" | "sms" | "both";
+
+export interface NotificationPreference {
+  id: string;
+  tenantId: string;
+  milestoneType: NotificationPrefMilestone;
+  channel: NotificationPrefChannel;
+  enabled: boolean;
+  customTemplate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const NOTIFICATION_PREF_MILESTONES: NotificationPrefMilestone[] = [
+  "created",
+  "picked_up",
+  "in_transit",
+  "out_for_delivery",
+  "delivered",
+  "exception",
+];
+
+export const NOTIFICATION_PREF_CHANNELS: NotificationPrefChannel[] = [
+  "email",
+  "sms",
+  "both",
+];
+
+export interface NotificationPreferencesUpdate {
+  milestoneType: NotificationPrefMilestone;
+  channel?: NotificationPrefChannel;
+  enabled?: boolean;
+  customTemplate?: string | null;
+}
