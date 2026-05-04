@@ -167,7 +167,6 @@ describe("Integration: Comprehensive Edge Cases", () => {
       const headers = authBearerHeader("t1");
 
       const endpoints = [
-        { method: "GET", url: "/api/shipments", headers },
         { method: "GET", url: "/api/milestones/shipment/s1", headers },
         { method: "GET", url: "/api/tenants/current", headers },
         { method: "GET", url: "/api/notifications/rules", headers },

@@ -64,7 +64,7 @@ describe("Server Lifecycle", () => {
     const headers = authBearerHeader("tenant-1");
 
     const requests = Array.from({ length: 5 }, () =>
-      server.inject({ method: "GET", url: "/api/shipments", headers })
+      server.inject({ method: "GET", url: "/api/tenants/current", headers })
     );
     const results = await Promise.all(requests);
 

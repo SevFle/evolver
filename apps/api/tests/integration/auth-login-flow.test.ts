@@ -80,10 +80,11 @@ describe("Integration: Auth Login Flow", () => {
     it("authenticates with valid API key for GET", async () => {
       const res = await server.inject({
         method: "GET",
-        url: "/api/shipments",
+        url: "/api/tenants/current",
         headers: apiKeyHeader("valid-login-key"),
       });
       expect(res.statusCode).toBe(200);
+      expect(res.json().data.tenantId).toBe("tenant-login");
     });
 
     it("authenticates with valid API key and CSRF for POST", async () => {
@@ -297,10 +298,11 @@ describe("Integration: Auth Login Flow", () => {
 
       const listRes = await server.inject({
         method: "GET",
-        url: "/api/shipments",
+        url: "/api/tenants/current",
         headers: authBearerHeader("tenant-1"),
       });
       expect(listRes.statusCode).toBe(200);
+      expect(listRes.json().data.tenantId).toBe("tenant-1");
     });
 
     it("complete workflow: API key lifecycle", async () => {

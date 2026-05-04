@@ -94,60 +94,61 @@ describe("main() – production startup", () => {
     }
   });
 
-  it("initializes db-backed resolver and resolves tenant via api key", async () => {
-    process.env.JWT_SECRET = "test-secret";
-    process.env.HOST = "127.0.0.1";
-    process.env.PORT = "0";
-    delete process.env.VITEST;
+    it("initializes db-backed resolver and resolves tenant via api key", async () => {
+      process.env.JWT_SECRET = "test-secret";
+      process.env.HOST = "127.0.0.1";
+      process.env.PORT = "0";
+      delete process.env.VITEST;
 
-    const fakeSelect = vi.fn().mockResolvedValue([{ tenantId: "tenant-from-db" }]);
-    const fakeFrom = vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ tenantId: "tenant-from-db" }]) }) });
-    const fakeWhere = vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ tenantId: "tenant-from-db" }]) });
-    const fakeLimit = vi.fn().mockResolvedValue([{ tenantId: "tenant-from-db" }]);
+      const fakeSelect = vi.fn().mockResolvedValue([{ tenantId: "tenant-from-db" }]);
+      const fakeFrom = vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ tenantId: "tenant-from-db" }]) }) });
+      const fakeWhere = vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ tenantId: "tenant-from-db" }]) });
+      const fakeLimit = vi.fn().mockResolvedValue([{ tenantId: "tenant-from-db" }]);
 
-    fakeFrom.mockReturnValue({ where: fakeWhere });
-    fakeWhere.mockReturnValue({ limit: fakeLimit });
-    fakeSelect.mockReturnValue({ from: fakeFrom });
+      fakeFrom.mockReturnValue({ where: fakeWhere });
+      fakeWhere.mockReturnValue({ limit: fakeLimit });
+      fakeSelect.mockReturnValue({ from: fakeFrom });
 
-    const mockDb = {
-      select: fakeSelect,
-    };
-    const mockApiKeys = {
-      tenantId: "tenant_id",
-      keyHash: "key_hash",
-      active: "active",
-    };
-    const mockEq = vi.fn((col: string, val: string) => ({ col, val }));
-    const mockAnd = vi.fn((...args: unknown[]) => args);
+      const mockDb = {
+        select: fakeSelect,
+      };
+      const mockApiKeys = {
+        tenantId: "tenant_id",
+        keyHash: "key_hash",
+        active: "active",
+      };
+      const mockEq = vi.fn((col: string, val: string) => ({ col, val }));
+      const mockAnd = vi.fn((...args: unknown[]) => args);
 
-    vi.doMock("@shiplens/db", () => ({
-      db: mockDb,
-      apiKeys: mockApiKeys,
-    }));
-    vi.doMock("drizzle-orm", () => ({
-      eq: mockEq,
-      and: mockAnd,
-    }));
+      vi.doMock("@shiplens/db", () => ({
+        db: mockDb,
+        apiKeys: mockApiKeys,
+      }));
+      vi.doMock("drizzle-orm", () => ({
+        eq: mockEq,
+        and: mockAnd,
+      }));
 
-    const { main } = await import("../src/server");
+      const { main } = await import("../src/server");
 
-    const server: FastifyInstance = await main();
+      const server: FastifyInstance = await main();
 
-    try {
-      const res = await server.inject({
-        method: "GET",
-        url: "/api/shipments",
-        headers: { "x-api-key": "my-api-key" },
-      });
+      try {
+        const res = await server.inject({
+          method: "GET",
+          url: "/api/tenants/current",
+          headers: { "x-api-key": "my-api-key" },
+        });
 
-      expect(res.statusCode).toBe(200);
-      expect(fakeSelect).toHaveBeenCalled();
-    } finally {
-      await Promise.allSettled([
-        server ? server.close() : Promise.resolve(),
-        Promise.resolve().then(() => vi.doUnmock("@shiplens/db")),
-        Promise.resolve().then(() => vi.doUnmock("drizzle-orm")),
-      ]);
-    }
-  });
+        expect(res.statusCode).toBe(200);
+        expect(res.json().data.tenantId).toBe("tenant-from-db");
+        expect(fakeSelect).toHaveBeenCalled();
+      } finally {
+        await Promise.allSettled([
+          server ? server.close() : Promise.resolve(),
+          Promise.resolve().then(() => vi.doUnmock("@shiplens/db")),
+          Promise.resolve().then(() => vi.doUnmock("drizzle-orm")),
+        ]);
+      }
+    });
 });
