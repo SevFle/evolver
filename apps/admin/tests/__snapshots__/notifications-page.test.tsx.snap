@@ -1,0 +1,20 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`NotificationsPage > snapshot matches 1`] = `
+<div>
+  <div
+    style="padding: 2rem; max-width: 640px; margin: 0px auto;"
+  >
+    <h1
+      style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem;"
+    >
+      Notification Rules
+    </h1>
+    <p
+      style="color: var(--color-muted);"
+    >
+      Notification rule management coming soon.
+    </p>
+  </div>
+</div>
+`;
