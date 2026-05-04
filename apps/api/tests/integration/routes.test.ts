@@ -8,6 +8,84 @@ import {
 } from "../helpers/auth";
 import { hashApiKey } from "../../src/plugins/auth";
 
+const mockDbHelper = vi.hoisted(() => {
+  let callIdx = 0;
+  const results = [
+    [{ count: "1" }],
+    [
+      {
+        id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        trackingId: "SL-TEST-001",
+        reference: "REF-001",
+        origin: "Shanghai",
+        destination: "Los Angeles",
+        carrier: "Maersk",
+        serviceType: "FCL",
+        status: "in_transit",
+        customerName: "John Doe",
+        customerEmail: "john@example.com",
+        customerPhone: "+1234567890",
+        metadata: null,
+        estimatedDelivery: new Date("2024-06-15T00:00:00.000Z"),
+        actualDelivery: null,
+        createdAt: new Date("2024-01-01T00:00:00.000Z"),
+        updatedAt: new Date("2024-01-10T00:00:00.000Z"),
+      },
+    ],
+    [
+      {
+        id: "ms-1-uuid",
+        shipmentId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        type: "departed_origin",
+        description: "Container departed from origin port",
+        location: "Shanghai, China",
+        carrierData: null,
+        occurredAt: new Date("2024-01-05T10:30:00.000Z"),
+        createdAt: new Date("2024-01-05T10:30:00.000Z"),
+      },
+    ],
+  ];
+
+  return {
+    reset: () => { callIdx = 0; },
+    createChain: () => {
+      const result = results[callIdx++] || [];
+      const c: any = { then: (resolve: any) => resolve(result) };
+      c.from = vi.fn().mockReturnValue(c);
+      c.where = vi.fn().mockReturnValue(c);
+      c.orderBy = vi.fn().mockReturnValue(c);
+      c.limit = vi.fn().mockReturnValue(c);
+      c.offset = vi.fn().mockReturnValue(c);
+      return c;
+    },
+  };
+});
+
+vi.mock("drizzle-orm", () => ({
+  eq: (..._args: any[]) => ({}),
+  and: (...args: any[]) => args.filter(Boolean),
+  or: (..._args: any[]) => ({}),
+  like: (..._args: any[]) => ({}),
+  inArray: (..._args: any[]) => ({}),
+  gte: (..._args: any[]) => ({}),
+  lte: (..._args: any[]) => ({}),
+  desc: () => ({}),
+  asc: () => ({}),
+  sql: (strings: TemplateStringsArray) => strings[0],
+}));
+
+vi.mock("@shiplens/db", () => ({
+  db: { select: vi.fn(() => mockDbHelper.createChain()) },
+  shipments: {},
+  milestones: {},
+  shipmentStatusEnum: {
+    enumValues: [
+      "pending", "booked", "in_transit", "at_port",
+      "customs_clearance", "out_for_delivery", "delivered", "exception",
+    ],
+  },
+}));
+
 const mockResolver = async (keyHash: string) => {
   if (keyHash === hashApiKey("valid-test-key")) return "tenant-int";
   return null;
@@ -65,11 +143,37 @@ describe("Integration: Shipment Routes", () => {
 
   beforeEach(async () => {
     process.env.JWT_SECRET = DEFAULT_SECRET;
+    mockDbHelper.reset();
     server = await buildServer({ apiKeyResolver: mockResolver });
   });
 
   afterEach(async () => {
     await server.close();
+  });
+
+  it("GET /api/shipments returns 200 with shipment list", async () => {
+    const res = await server.inject({
+      method: "GET",
+      url: "/api/shipments",
+      headers: authBearerHeader("tenant-1"),
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.success).toBe(true);
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]).toHaveProperty("id");
+    expect(body.data[0]).toHaveProperty("trackingId");
+    expect(body.data[0]).toHaveProperty("status");
+    expect(body.data[0]).toHaveProperty("origin");
+    expect(body.data[0]).toHaveProperty("destination");
+    expect(body.data[0].trackingId).toBe("SL-TEST-001");
+    expect(body).toHaveProperty("total");
+    expect(body).toHaveProperty("page");
+    expect(body).toHaveProperty("pageSize");
+    expect(body.total).toBe(1);
+    expect(body.page).toBe(1);
+    expect(body.pageSize).toBe(25);
   });
 
   it("GET /api/shipments/:trackingId returns tracking data", async () => {

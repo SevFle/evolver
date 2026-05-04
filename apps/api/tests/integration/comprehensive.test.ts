@@ -4,6 +4,73 @@ import { authBearerHeader, apiKeyHeader, DEFAULT_SECRET, createCsrfToken } from 
 import { hashApiKey } from "../../src/plugins/auth";
 import jwt from "jsonwebtoken";
 
+const mockDbHelper = vi.hoisted(() => {
+  let callIdx = 0;
+  const results = [
+    [{ count: "1" }],
+    [
+      {
+        id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        trackingId: "SL-COMP-001",
+        reference: "REF-COMP-001",
+        origin: "Rotterdam",
+        destination: "New York",
+        carrier: "CMA CGM",
+        serviceType: "FCL",
+        status: "in_transit",
+        customerName: "Jane Doe",
+        customerEmail: "jane@example.com",
+        customerPhone: "+9876543210",
+        metadata: null,
+        estimatedDelivery: new Date("2024-07-20T00:00:00.000Z"),
+        actualDelivery: null,
+        createdAt: new Date("2024-02-01T00:00:00.000Z"),
+        updatedAt: new Date("2024-02-10T00:00:00.000Z"),
+      },
+    ],
+    [] as any[],
+  ];
+
+  return {
+    reset: () => { callIdx = 0; },
+    createChain: () => {
+      const result = results[callIdx++] || [];
+      const c: any = { then: (resolve: any) => resolve(result) };
+      c.from = vi.fn().mockReturnValue(c);
+      c.where = vi.fn().mockReturnValue(c);
+      c.orderBy = vi.fn().mockReturnValue(c);
+      c.limit = vi.fn().mockReturnValue(c);
+      c.offset = vi.fn().mockReturnValue(c);
+      return c;
+    },
+  };
+});
+
+vi.mock("drizzle-orm", () => ({
+  eq: (..._args: any[]) => ({}),
+  and: (...args: any[]) => args.filter(Boolean),
+  or: (..._args: any[]) => ({}),
+  like: (..._args: any[]) => ({}),
+  inArray: (..._args: any[]) => ({}),
+  gte: (..._args: any[]) => ({}),
+  lte: (..._args: any[]) => ({}),
+  desc: () => ({}),
+  asc: () => ({}),
+  sql: (strings: TemplateStringsArray) => strings[0],
+}));
+
+vi.mock("@shiplens/db", () => ({
+  db: { select: vi.fn(() => mockDbHelper.createChain()) },
+  shipments: {},
+  milestones: {},
+  shipmentStatusEnum: {
+    enumValues: [
+      "pending", "booked", "in_transit", "at_port",
+      "customs_clearance", "out_for_delivery", "delivered", "exception",
+    ],
+  },
+}));
+
 const mockResolver = async (keyHash: string) => {
   if (keyHash === hashApiKey("valid-key")) return "tenant-integ";
   return null;
@@ -14,6 +81,7 @@ describe("Integration: Comprehensive Edge Cases", () => {
 
   beforeEach(async () => {
     process.env.JWT_SECRET = DEFAULT_SECRET;
+    mockDbHelper.reset();
     server = await buildServer({ apiKeyResolver: mockResolver });
   });
 
@@ -172,6 +240,7 @@ describe("Integration: Comprehensive Edge Cases", () => {
         { method: "GET", url: "/api/notifications/rules", headers },
         { method: "GET", url: "/api/notifications/history", headers },
         { method: "GET", url: "/api/api-keys", headers },
+        { method: "GET", url: "/api/shipments", headers },
         { method: "GET", url: "/api/tracking-pages/T1" },
       ];
 
