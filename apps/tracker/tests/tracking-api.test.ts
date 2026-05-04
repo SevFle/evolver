@@ -500,7 +500,7 @@ describe("getShipmentByTrackingId", () => {
     expect(result?.branding?.primaryColor).toBe("#3B82F6");
   });
 
-  it("falls back to original tenantName when sanitized is null", async () => {
+  it("tenantName is null when API returns null tenantName (no fallback bypass)", async () => {
     mockHeaders("acme.shiplens.io");
 
     const data = {
@@ -527,5 +527,325 @@ describe("getShipmentByTrackingId", () => {
     const result = await getShipmentByTrackingId("SL-1234");
 
     expect(result?.branding?.tenantName).toBeNull();
+  });
+
+  it("tenantName is empty string when all content is HTML (no fallback to raw)", async () => {
+    mockHeaders("acme.shiplens.io");
+
+    const data = {
+      success: true,
+      data: {
+        trackingId: "SL-1234",
+        origin: "Shanghai",
+        destination: "LA",
+        status: "in_transit",
+        branding: {
+          tenantName: "<script>alert(1)</script>",
+        },
+      },
+    };
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(data),
+    });
+
+    const { getShipmentByTrackingId } = await import(
+      "../src/lib/tracking-api"
+    );
+    const result = await getShipmentByTrackingId("SL-1234");
+
+    expect(result?.branding?.tenantName).toBe("alert(1)");
+  });
+
+  it("tenantName is sanitized with no fallback to unsanitized original", async () => {
+    mockHeaders("acme.shiplens.io");
+
+    const data = {
+      success: true,
+      data: {
+        trackingId: "SL-1234",
+        origin: "Shanghai",
+        destination: "LA",
+        status: "in_transit",
+        branding: {
+          tenantName: '<img src=x onerror="evil()">',
+        },
+      },
+    };
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(data),
+    });
+
+    const { getShipmentByTrackingId } = await import(
+      "../src/lib/tracking-api"
+    );
+    const result = await getShipmentByTrackingId("SL-1234");
+
+    expect(result?.branding?.tenantName).toBe("");
+  });
+
+  it("returns canonical logoUrl via parsed.href from branding", async () => {
+    mockHeaders("acme.shiplens.io");
+
+    const data = {
+      success: true,
+      data: {
+        trackingId: "SL-1234",
+        origin: "Shanghai",
+        destination: "LA",
+        status: "in_transit",
+        branding: {
+          tenantName: "Acme",
+          logoUrl: "https://cdn.example.com",
+        },
+      },
+    };
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(data),
+    });
+
+    const { getShipmentByTrackingId } = await import(
+      "../src/lib/tracking-api"
+    );
+    const result = await getShipmentByTrackingId("SL-1234");
+
+    expect(result?.branding?.logoUrl).toBe("https://cdn.example.com/");
+  });
+
+  it("trims whitespace from logoUrl in branding", async () => {
+    mockHeaders("acme.shiplens.io");
+
+    const data = {
+      success: true,
+      data: {
+        trackingId: "SL-1234",
+        origin: "Shanghai",
+        destination: "LA",
+        status: "in_transit",
+        branding: {
+          tenantName: "Acme",
+          logoUrl: "  https://cdn.example.com/logo.png  ",
+        },
+      },
+    };
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(data),
+    });
+
+    const { getShipmentByTrackingId } = await import(
+      "../src/lib/tracking-api"
+    );
+    const result = await getShipmentByTrackingId("SL-1234");
+
+    expect(result?.branding?.logoUrl).toBe("https://cdn.example.com/logo.png");
+  });
+
+  it("normalizes uppercase protocol in logoUrl to canonical form", async () => {
+    mockHeaders("acme.shiplens.io");
+
+    const data = {
+      success: true,
+      data: {
+        trackingId: "SL-1234",
+        origin: "Shanghai",
+        destination: "LA",
+        status: "in_transit",
+        branding: {
+          tenantName: "Acme",
+          logoUrl: "HTTPS://cdn.example.com/logo.png",
+        },
+      },
+    };
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(data),
+    });
+
+    const { getShipmentByTrackingId } = await import(
+      "../src/lib/tracking-api"
+    );
+    const result = await getShipmentByTrackingId("SL-1234");
+
+    expect(result?.branding?.logoUrl).toBe("https://cdn.example.com/logo.png");
+  });
+
+  it("returns null for logoUrl with only whitespace", async () => {
+    mockHeaders("acme.shiplens.io");
+
+    const data = {
+      success: true,
+      data: {
+        trackingId: "SL-1234",
+        origin: "Shanghai",
+        destination: "LA",
+        status: "in_transit",
+        branding: {
+          tenantName: "Acme",
+          logoUrl: "   ",
+        },
+      },
+    };
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(data),
+    });
+
+    const { getShipmentByTrackingId } = await import(
+      "../src/lib/tracking-api"
+    );
+    const result = await getShipmentByTrackingId("SL-1234");
+
+    expect(result?.branding?.logoUrl).toBeNull();
+  });
+
+  it("sanitizes all branding fields simultaneously", async () => {
+    mockHeaders("acme.shiplens.io");
+
+    const data = {
+      success: true,
+      data: {
+        trackingId: "SL-1234",
+        origin: "Shanghai",
+        destination: "LA",
+        status: "in_transit",
+        branding: {
+          tenantName: "<b>Acme</b>",
+          logoUrl: "  https://cdn.example.com/logo.png  ",
+          primaryColor: "red",
+          tagline: "<script>xss</script>Fast",
+          contactEmail: "not-email",
+          contactPhone: "<i>555</i>",
+          supportUrl: "javascript:void(0)",
+          customFooterText: "<b>Bold</b> text",
+        },
+      },
+    };
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(data),
+    });
+
+    const { getShipmentByTrackingId } = await import(
+      "../src/lib/tracking-api"
+    );
+    const result = await getShipmentByTrackingId("SL-1234");
+
+    expect(result?.branding?.tenantName).toBe("Acme");
+    expect(result?.branding?.logoUrl).toBe("https://cdn.example.com/logo.png");
+    expect(result?.branding?.primaryColor).toBeNull();
+    expect(result?.branding?.tagline).toBe("xssFast");
+    expect(result?.branding?.contactEmail).toBeNull();
+    expect(result?.branding?.contactPhone).toBe("555");
+    expect(result?.branding?.supportUrl).toBeNull();
+    expect(result?.branding?.customFooterText).toBe("Bold text");
+  });
+
+  it("handles branding with all null fields", async () => {
+    mockHeaders("acme.shiplens.io");
+
+    const data = {
+      success: true,
+      data: {
+        trackingId: "SL-1234",
+        origin: "Shanghai",
+        destination: "LA",
+        status: "in_transit",
+        branding: {
+          tenantName: null,
+          logoUrl: null,
+          primaryColor: null,
+          tagline: null,
+          contactEmail: null,
+          contactPhone: null,
+          supportUrl: null,
+          customFooterText: null,
+        },
+      },
+    };
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(data),
+    });
+
+    const { getShipmentByTrackingId } = await import(
+      "../src/lib/tracking-api"
+    );
+    const result = await getShipmentByTrackingId("SL-1234");
+
+    expect(result?.branding?.tenantName).toBeNull();
+    expect(result?.branding?.logoUrl).toBeNull();
+    expect(result?.branding?.primaryColor).toBeNull();
+    expect(result?.branding?.tagline).toBeNull();
+    expect(result?.branding?.contactEmail).toBeNull();
+    expect(result?.branding?.contactPhone).toBeNull();
+    expect(result?.branding?.supportUrl).toBeNull();
+    expect(result?.branding?.customFooterText).toBeNull();
+  });
+
+  it("handles branding with all undefined fields", async () => {
+    mockHeaders("acme.shiplens.io");
+
+    const data = {
+      success: true,
+      data: {
+        trackingId: "SL-1234",
+        origin: "Shanghai",
+        destination: "LA",
+        status: "in_transit",
+        branding: {},
+      },
+    };
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(data),
+    });
+
+    const { getShipmentByTrackingId } = await import(
+      "../src/lib/tracking-api"
+    );
+    const result = await getShipmentByTrackingId("SL-1234");
+
+    expect(result?.branding?.tenantName).toBeNull();
+    expect(result?.branding?.logoUrl).toBeNull();
+    expect(result?.branding?.primaryColor).toBeNull();
+  });
+
+  it("returns null for data without branding key", async () => {
+    mockHeaders("acme.shiplens.io");
+
+    const data = {
+      success: true,
+      data: {
+        trackingId: "SL-1234",
+        origin: "Shanghai",
+        destination: "LA",
+        status: "in_transit",
+      },
+    };
+
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(data),
+    });
+
+    const { getShipmentByTrackingId } = await import(
+      "../src/lib/tracking-api"
+    );
+    const result = await getShipmentByTrackingId("SL-1234");
+
+    expect(result?.branding).toBeUndefined();
+    expect(result?.trackingId).toBe("SL-1234");
   });
 });

@@ -27,10 +27,11 @@ export function validateLogoUrl(
   url: string | null | undefined
 ): string | null {
   if (!url) return null;
+  const trimmed = url.trim();
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(trimmed);
     if (parsed.protocol !== "https:") return null;
-    return url;
+    return parsed.href;
   } catch {
     return null;
   }

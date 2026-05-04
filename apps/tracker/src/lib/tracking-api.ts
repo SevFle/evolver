@@ -85,7 +85,7 @@ export async function getShipmentByTrackingId(
     if (data?.branding) {
       data.branding = {
         ...data.branding,
-        tenantName: sanitizeTextField(data.branding.tenantName) ?? data.branding.tenantName,
+        tenantName: sanitizeTextField(data.branding.tenantName),
         logoUrl: validateLogoUrl(data.branding.logoUrl),
         primaryColor: validatePrimaryColor(data.branding.primaryColor),
         tagline: sanitizeTextField(data.branding.tagline),
