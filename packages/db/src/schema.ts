@@ -115,6 +115,56 @@ export const notificationRules = pgTable("notification_rules", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const notificationTemplates = pgTable("notification_templates", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tenantId: uuid("tenant_id")
+    .references(() => tenants.id, { onDelete: "cascade" })
+    .notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  milestoneType: milestoneTypeEnum("milestone_type").notNull(),
+  channel: notificationChannelEnum("channel").default("email").notNull(),
+  subject: varchar("subject", { length: 500 }),
+  htmlBody: text("html_body"),
+  textBody: text("text_body"),
+  enabled: boolean("enabled").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const notificationPreferences = pgTable("notification_preferences", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tenantId: uuid("tenant_id")
+    .references(() => tenants.id, { onDelete: "cascade" })
+    .notNull(),
+  defaultChannel: notificationChannelEnum("default_channel").default("email").notNull(),
+  fromEmail: varchar("from_email", { length: 255 }),
+  fromSmsNumber: varchar("from_sms_number", { length: 20 }),
+  quietHoursStart: varchar("quiet_hours_start", { length: 5 }),
+  quietHoursEnd: varchar("quiet_hours_end", { length: 5 }),
+  quietHoursTimezone: varchar("quiet_hours_timezone", { length: 50 }),
+  enabled: boolean("enabled").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const notificationLog = pgTable("notification_log", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tenantId: uuid("tenant_id")
+    .references(() => tenants.id, { onDelete: "cascade" })
+    .notNull(),
+  shipmentId: uuid("shipment_id")
+    .references(() => shipments.id, { onDelete: "cascade" })
+    .notNull(),
+  milestoneType: milestoneTypeEnum("milestone_type"),
+  channel: notificationChannelEnum("channel").notNull(),
+  recipient: varchar("recipient", { length: 255 }).notNull(),
+  status: varchar("status", { length: 50 }).default("pending").notNull(),
+  providerId: varchar("provider_id", { length: 255 }),
+  errorMessage: text("error_message"),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const notifications = pgTable("notifications", {
   id: uuid("id").defaultRandom().primaryKey(),
   shipmentId: uuid("shipment_id")
@@ -132,6 +182,9 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   shipments: many(shipments),
   apiKeys: many(apiKeys),
   notificationRules: many(notificationRules),
+  notificationTemplates: many(notificationTemplates),
+  notificationPreferences: many(notificationPreferences),
+  notificationLog: many(notificationLog),
 }));
 
 export const shipmentsRelations = relations(shipments, ({ one, many }) => ({
@@ -167,6 +220,31 @@ export const notificationRulesRelations = relations(notificationRules, ({ one })
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   shipment: one(shipments, {
     fields: [notifications.shipmentId],
+    references: [shipments.id],
+  }),
+}));
+
+export const notificationTemplatesRelations = relations(notificationTemplates, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [notificationTemplates.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const notificationPreferencesRelations = relations(notificationPreferences, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [notificationPreferences.tenantId],
+    references: [tenants.id],
+  }),
+}));
+
+export const notificationLogRelations = relations(notificationLog, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [notificationLog.tenantId],
+    references: [tenants.id],
+  }),
+  shipment: one(shipments, {
+    fields: [notificationLog.shipmentId],
     references: [shipments.id],
   }),
 }));
