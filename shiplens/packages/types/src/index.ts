@@ -75,3 +75,66 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
 }
+
+export type MilestoneType = ShipmentStatus;
+
+export interface NotificationTemplateData {
+  id?: string;
+  tenantId: string;
+  name: string;
+  milestoneType: MilestoneType;
+  channel: NotificationChannel;
+  subject?: string;
+  bodyHtml?: string;
+  bodyText?: string;
+  isActive?: boolean;
+}
+
+export interface NotificationRuleData {
+  id?: string;
+  tenantId: string;
+  triggerStatus: ShipmentStatus;
+  channel: NotificationChannel;
+  templateId?: string;
+  isEnabled?: boolean;
+  delayMinutes?: number;
+}
+
+export interface NotificationPreferencesData {
+  tenantId: string;
+  emailEnabled?: boolean;
+  smsEnabled?: boolean;
+  defaultFromEmail?: string;
+  defaultFromSmsNumber?: string;
+  quietHoursStart?: string;
+  quietHoursEnd?: string;
+  quietHoursTimezone?: string;
+  maxRetries?: number;
+  retryIntervalMinutes?: number;
+}
+
+export interface SendEmailPayload {
+  to: string;
+  from: string;
+  subject: string;
+  html?: string;
+  text?: string;
+}
+
+export interface SendSmsPayload {
+  to: string;
+  from: string;
+  body: string;
+}
+
+export interface SendResult {
+  success: boolean;
+  messageId?: string;
+  error?: string;
+}
+
+export interface TemplateRenderResult {
+  subject: string;
+  bodyHtml?: string;
+  bodyText?: string;
+}

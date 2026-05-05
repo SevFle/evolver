@@ -95,6 +95,22 @@ export const apiKeys = pgTable("api_keys", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const notificationTemplates = pgTable("notification_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  milestoneType: shipmentStatusEnum("milestone_type").notNull(),
+  channel: notificationChannelEnum("channel").notNull(),
+  subject: varchar("subject", { length: 500 }),
+  bodyHtml: text("body_html"),
+  bodyText: text("body_text"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const notificationRules = pgTable("notification_rules", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id")
@@ -102,8 +118,27 @@ export const notificationRules = pgTable("notification_rules", {
     .references(() => tenants.id),
   triggerStatus: shipmentStatusEnum("trigger_status").notNull(),
   channel: notificationChannelEnum("channel").notNull(),
-  templateId: varchar("template_id", { length: 255 }),
+  templateId: uuid("template_id").references(() => notificationTemplates.id),
   isEnabled: boolean("is_enabled").notNull().default(true),
   delayMinutes: integer("delay_minutes").default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const tenantNotificationPreferences = pgTable("tenant_notification_preferences", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id)
+    .unique(),
+  emailEnabled: boolean("email_enabled").notNull().default(true),
+  smsEnabled: boolean("sms_enabled").notNull().default(false),
+  defaultFromEmail: varchar("default_from_email", { length: 255 }),
+  defaultFromSmsNumber: varchar("default_from_sms_number", { length: 20 }),
+  quietHoursStart: varchar("quiet_hours_start", { length: 5 }),
+  quietHoursEnd: varchar("quiet_hours_end", { length: 5 }),
+  quietHoursTimezone: varchar("quiet_hours_timezone", { length: 50 }),
+  maxRetries: integer("max_retries").notNull().default(3),
+  retryIntervalMinutes: integer("retry_interval_minutes").notNull().default(30),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
