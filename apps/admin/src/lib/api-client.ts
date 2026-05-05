@@ -42,10 +42,24 @@ function buildHeaders(options: Pick<RequestInit, "headers">): Record<string, str
   }
 
   if (options.headers) {
-    const incoming = options.headers as Record<string, string>;
-    for (const [key, value] of Object.entries(incoming)) {
-      headers[key.toLowerCase()] = value;
+    let incoming: Record<string, string> = {};
+    const h = options.headers;
+    if (h instanceof Headers) {
+      h.forEach((value, key) => {
+        incoming[key.toLowerCase()] = value;
+      });
+    } else if (Array.isArray(h)) {
+      for (const [key, value] of h) {
+        incoming[key.toLowerCase()] = value;
+      }
+    } else {
+      for (const [key, value] of Object.entries(
+        h as Record<string, string>
+      )) {
+        incoming[key.toLowerCase()] = value;
+      }
     }
+    Object.assign(headers, incoming);
   }
 
   return headers;
@@ -74,7 +88,8 @@ async function request<T>(
 }
 
 export const apiClient = {
-  get: <T>(path: string) => request<T>(path, { method: "GET" }),
+  get: <T>(path: string, options?: Pick<RequestInit, "headers">) =>
+    request<T>(path, { method: "GET", ...options }),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "POST", body: JSON.stringify(body) }),
   patch: <T>(path: string, body?: unknown) =>

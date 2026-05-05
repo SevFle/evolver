@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { ShipmentsPage } from "../src/components/ShipmentsPage";
 
@@ -12,6 +12,9 @@ vi.mock("../src/lib/api-client", () => ({
 }));
 
 describe("ShipmentsPage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
   it("renders the Shipments heading", () => {
     render(<ShipmentsPage />);
     expect(

@@ -207,11 +207,12 @@ describe("apiClient", () => {
     });
 
     const { apiClient: freshClient } = await import("../src/lib/api-client");
-    await freshClient.get("/test");
+    await freshClient.get("/test", { headers: { "X-Custom": "value" } });
 
     const callArgs = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     const headers = callArgs[1].headers as Record<string, string>;
     expect(headers["content-type"]).toBe("application/json");
+    expect(headers["x-custom"]).toBe("value");
   });
 
   it("clears session on 401", async () => {
